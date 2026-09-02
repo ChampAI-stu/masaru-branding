@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>สินค้า / Top SKU · MASARU Branding</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <div class="topbar">
+      <button class="mobile-btn" id="mobileBtn">☰</button>
+      <div><h1>สินค้า / Top SKU</h1><div class="sub" id="rangeLabel">—</div></div>
+      <div class="spacer"></div>
+      <button class="btn ghost sm" id="btnCsv">ดาวน์โหลด CSV</button>
+      <button class="btn sm" id="btnReload">รีเฟรช</button>
+    </div>
+
+    <div class="content">
+      <div class="filters">
+        <div class="field"><label>ตั้งแต่วันที่</label><input type="date" id="dFrom"></div>
+        <div class="field"><label>ถึงวันที่</label><input type="date" id="dTo"></div>
+        <div class="field"><label>ช่วงสำเร็จรูป</label>
+          <select id="selPreset">
+            <option value="">— กำหนดเอง —</option>
+            <option value="7d">7 วันล่าสุด</option>
+            <option value="30d" selected>30 วันล่าสุด</option>
+            <option value="mtd">เดือนนี้</option>
+            <option value="lastm">เดือนก่อน</option>
+            <option value="ytd">ตั้งแต่ต้นปี</option>
+          </select>
+        </div>
+        <div class="field"><label>แพลตฟอร์ม</label>
+          <select id="selPlat">
+            <option value="ALL">รวมทุกแพลตฟอร์ม</option>
+            <option value="TIKTOK">TikTok Shop</option>
+            <option value="LAZADA">Lazada</option>
+          </select>
+        </div>
+        <div class="field"><label>แบรนด์</label>
+          <select id="selBrand"><option value="ALL">ทุกแบรนด์</option></select>
+        </div>
+        <div class="field"><label>จำนวนอันดับ</label>
+          <div class="seg" id="segTop">
+            <button data-v="10" class="on">10</button>
+            <button data-v="20">20</button>
+            <button data-v="50">50</button>
+          </div>
+        </div>
+        <div class="field"><label>มุมมอง</label>
+          <div class="seg" id="segView">
+            <button data-v="combined" class="on">รวม</button>
+            <button data-v="split">แยกแพลตฟอร์ม</button>
+          </div>
+        </div>
+        <button class="btn" id="btnApply">ดูข้อมูล</button>
+      </div>
+
+      <!-- brand summary strip -->
+      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px" id="brandStrip"></div>
+
+      <!-- combined view -->
+      <div id="viewCombined">
+        <div class="card" style="margin-bottom:16px">
+          <div class="hd"><h3>Top SKU · <span id="lblScope">รวมทุกแพลตฟอร์ม</span></h3>
+            <div class="spacer"></div>
+            <div class="field" style="margin:0"><input type="search" id="qSku" placeholder="ค้นหา SKU / ชื่อสินค้า" style="min-width:210px"></div>
+          </div>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr>
+                <th style="width:40px">#</th><th>SKU</th><th>ชื่อสินค้า</th><th>แบรนด์</th>
+                <th class="num">จำนวน</th><th class="num">ออเดอร์</th>
+                <th class="num">TikTok</th><th class="num">Lazada</th>
+                <th class="num">GMV รวม</th><th style="width:100px">สัดส่วน</th>
+              </tr></thead>
+              <tbody id="tbCombined"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card">
+          <div class="hd"><h3>กราฟเปรียบเทียบ Top 10</h3></div>
+          <div class="bd"><div class="chart-box"><canvas id="chTop"></canvas></div></div>
+        </div>
+      </div>
+
+      <!-- split view -->
+      <div id="viewSplit" style="display:none">
+        <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(400px,1fr))">
+          <div class="card">
+            <div class="hd"><span class="pill tiktok">TikTok Shop</span><h3 style="margin-left:6px">Top SKU</h3></div>
+            <div class="tbl-wrap"><table class="tbl">
+              <thead><tr><th style="width:36px">#</th><th>SKU</th><th>แบรนด์</th><th class="num">จำนวน</th><th class="num">GMV</th></tr></thead>
+              <tbody id="tbTT"></tbody></table></div>
+          </div>
+          <div class="card">
+            <div class="hd"><span class="pill lazada">Lazada</span><h3 style="margin-left:6px">Top SKU</h3></div>
+            <div class="tbl-wrap"><table class="tbl">
+              <thead><tr><th style="width:36px">#</th><th>SKU</th><th>แบรนด์</th><th class="num">จำนวน</th><th class="num">GMV</th></tr></thead>
+              <tbody id="tbLZ"></tbody></table></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- per-brand tables -->
+      <div class="card" style="margin-top:16px">
+        <div class="hd"><h3>Top SKU แยกตามแบรนด์</h3><div class="spacer"></div>
+          <span style="font-size:12px;color:var(--muted)">แสดง 5 อันดับแรกของแต่ละแบรนด์</span></div>
+        <div class="bd" id="byBrand"><div class="empty">กำลังโหลด…</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.7/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  var topN=10, view='combined', chart=null, rowsCombined=[];
+
+  function range(){ return [$('dFrom').value,$('dTo').value]; }
+
+  function skuRow(x,i,max){
+    var p=(Number(x.gmv)||0)/max*100;
+    return '<tr><td><div class="rank">'+(i+1)+'</div></td>'+
+      '<td><b>'+MB.esc(x.sku)+'</b></td>'+
+      '<td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+MB.esc(x.product_name||'-')+'</td>'+
+      '<td><span class="pill mute">'+MB.esc(x.brand||'UNMAPPED')+'</span></td>'+
+      '<td class="num">'+MB.fmt.n(x.qty)+'</td>'+
+      '<td class="num">'+MB.fmt.n(x.orders)+'</td>'+
+      '<td class="num">'+MB.fmt.short(x.gmv_tiktok)+'</td>'+
+      '<td class="num">'+MB.fmt.short(x.gmv_lazada)+'</td>'+
+      '<td class="num"><b>'+MB.fmt.baht(x.gmv)+'</b></td>'+
+      '<td><div class="bar-mini"><i style="width:'+p.toFixed(0)+'%"></i></div></td></tr>';
+  }
+
+  function paintCombined(rows){
+    var tb=$('tbCombined');
+    var q=($('qSku').value||'').trim().toLowerCase();
+    var list = q ? rows.filter(function(x){
+      return String(x.sku||'').toLowerCase().indexOf(q)>=0 ||
+             String(x.product_name||'').toLowerCase().indexOf(q)>=0; }) : rows;
+    if(!list.length){ MB.tableEmpty(tb,10, q?'ไม่พบ SKU ที่ค้นหา':'ยังไม่มีข้อมูลในช่วงเวลานี้'); return; }
+    var max=Math.max.apply(null,list.map(function(x){return Number(x.gmv)||0;}))||1;
+    tb.innerHTML=list.map(function(x,i){ return skuRow(x,i,max); }).join('');
+  }
+
+  function paintChart(rows){
+    var top=rows.slice(0,10);
+    if(chart) chart.destroy();
+    chart=new Chart($('chTop'),{
+      type:'bar',
+      data:{ labels: top.map(function(x){return x.sku;}), datasets:[
+        { label:'TikTok', data: top.map(function(x){return Number(x.gmv_tiktok)||0;}),
+          backgroundColor:MB.COLORS.ink, borderRadius:5, stack:'g' },
+        { label:'Lazada', data: top.map(function(x){return Number(x.gmv_lazada)||0;}),
+          backgroundColor:MB.COLORS.purple, borderRadius:5, stack:'g' }
+      ]},
+      options:{ plugins:{legend:{position:'bottom'},
+        tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+MB.fmt.baht(c.parsed.y);}}}},
+        scales:{ x:{stacked:true,grid:{display:false},ticks:{maxRotation:45,minRotation:0}},
+                 y:{stacked:true,beginAtZero:true,grid:{color:'#EEF1F6'},
+                    ticks:{callback:function(v){return MB.fmt.short(v);}}} } }
+    });
+  }
+
+  async function loadCombined(){
+    var r=range(), tb=$('tbCombined'); MB.tableLoading(tb,10);
+    rowsCombined = await MB.rpc('brand_top_skus',{
+      p_from:r[0],p_to:r[1],p_platform:$('selPlat').value,p_brand:$('selBrand').value,p_limit:topN});
+    rowsCombined = rowsCombined||[];
+    paintCombined(rowsCombined);
+    paintChart(rowsCombined);
+  }
+
+  async function loadSplit(){
+    var r=range();
+    MB.tableLoading($('tbTT'),5); MB.tableLoading($('tbLZ'),5);
+    var res = await Promise.all([
+      MB.rpc('brand_top_skus',{p_from:r[0],p_to:r[1],p_platform:'TIKTOK',p_brand:$('selBrand').value,p_limit:topN}),
+      MB.rpc('brand_top_skus',{p_from:r[0],p_to:r[1],p_platform:'LAZADA',p_brand:$('selBrand').value,p_limit:topN})
+    ]);
+    [['tbTT',res[0]],['tbLZ',res[1]]].forEach(function(pair){
+      var tb=$(pair[0]), rows=pair[1]||[];
+      if(!rows.length){ MB.tableEmpty(tb,5); return; }
+      tb.innerHTML=rows.map(function(x,i){
+        return '<tr><td><div class="rank">'+(i+1)+'</div></td>'+
+          '<td><b>'+MB.esc(x.sku)+'</b><div style="font-size:11.5px;color:var(--muted);max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+MB.esc(x.product_name||'')+'</div></td>'+
+          '<td><span class="pill mute">'+MB.esc(x.brand||'UNMAPPED')+'</span></td>'+
+          '<td class="num">'+MB.fmt.n(x.qty)+'</td>'+
+          '<td class="num"><b>'+MB.fmt.baht(x.gmv)+'</b></td></tr>';
+      }).join('');
+    });
+  }
+
+  async function loadBrandStrip(){
+    var r=range();
+    var rows = await MB.rpc('brand_by_brand',{p_from:r[0],p_to:r[1],p_platform:$('selPlat').value});
+    rows=rows||[];
+    var tot=rows.reduce(function(a,b){return a+(Number(b.gmv)||0);},0);
+    if(!rows.length){ $('brandStrip').innerHTML=''; return; }
+    var cls=['navy','gold','green','','red'];
+    $('brandStrip').innerHTML = rows.slice(0,6).map(function(x,i){
+      var sh=tot?(Number(x.gmv)/tot*100):0;
+      return '<div class="kpi '+(cls[i%cls.length])+'"><div class="lb">'+MB.esc(x.brand)+'</div>'+
+        '<div class="vl" style="font-size:20px">'+MB.fmt.baht(x.gmv)+'</div>'+
+        '<div class="ft">'+MB.fmt.n(x.qty)+' ชิ้น · '+MB.fmt.pct(sh)+'</div>'+
+        '<div class="progress"><i style="width:'+sh.toFixed(0)+'%"></i></div></div>';
+    }).join('');
+  }
+
+  async function loadByBrand(){
+    var r=range(), box=$('byBrand');
+    box.innerHTML='<div class="empty"><span class="spinner"></span></div>';
+    var brands = MB.CFG.brands;
+    try{
+      var all = await Promise.all(brands.map(function(b){
+        return MB.rpc('brand_top_skus',{p_from:r[0],p_to:r[1],p_platform:$('selPlat').value,p_brand:b,p_limit:5});
+      }));
+      var h='<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">';
+      brands.forEach(function(b,i){
+        var rows=all[i]||[];
+        h+='<div style="border:1px solid var(--line);border-radius:12px;overflow:hidden">'+
+           '<div style="padding:9px 13px;background:#FAFBFD;border-bottom:1px solid var(--line);font-weight:700;font-size:13px">'+
+           MB.esc(b)+' <span style="color:var(--muted);font-weight:400">· '+rows.length+' SKU</span></div>';
+        if(!rows.length){ h+='<div class="empty" style="padding:20px">ไม่มีข้อมูล</div>'; }
+        else{
+          h+='<table class="tbl"><tbody>';
+          rows.forEach(function(x,j){
+            h+='<tr><td style="width:34px"><div class="rank">'+(j+1)+'</div></td>'+
+               '<td><b style="font-size:12.5px">'+MB.esc(x.sku)+'</b>'+
+               '<div style="font-size:11.5px;color:var(--muted);max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+MB.esc(x.product_name||'')+'</div></td>'+
+               '<td class="num" style="font-size:12.5px">'+MB.fmt.n(x.qty)+'</td>'+
+               '<td class="num"><b>'+MB.fmt.short(x.gmv)+'</b></td></tr>';
+          });
+          h+='</tbody></table>';
+        }
+        h+='</div>';
+      });
+      h+='</div>';
+      box.innerHTML=h;
+    }catch(e){ box.innerHTML='<div class="empty">'+MB.esc(e.message||e)+'</div>'; }
+  }
+
+  async function refresh(){
+    var r=range();
+    if(!r[0]||!r[1]){ MB.toast('เลือกช่วงวันที่ก่อน','err'); return; }
+    $('rangeLabel').textContent=MB.fmt.date(r[0])+' – '+MB.fmt.date(r[1]);
+    $('lblScope').textContent = $('selPlat').value==='ALL' ? 'รวมทุกแพลตฟอร์ม'
+      : ($('selPlat').value==='TIKTOK' ? 'TikTok Shop' : 'Lazada');
+    try{
+      await Promise.all([
+        view==='combined' ? loadCombined() : loadSplit(),
+        loadBrandStrip()
+      ]);
+      loadByBrand();
+    }catch(e){ MB.toast('โหลดไม่สำเร็จ: '+(e.message||e),'err'); }
+  }
+
+  async function loadBrandOptions(){
+    var sel=$('selBrand');
+    MB.CFG.brands.forEach(function(b){
+      var o=document.createElement('option'); o.value=b; o.textContent=b; sel.appendChild(o);
+    });
+    try{
+      var res=await MB.sb.from('brand_sku_master').select('brand').not('brand','is',null).limit(1000);
+      var extra=[];
+      (res.data||[]).forEach(function(x){
+        if(x.brand && MB.CFG.brands.indexOf(x.brand)<0 && extra.indexOf(x.brand)<0) extra.push(x.brand);
+      });
+      extra.sort().forEach(function(b){
+        var o=document.createElement('option'); o.value=b; o.textContent=b; sel.appendChild(o);
+      });
+    }catch(e){}
+  }
+
+  (async function(){
+    var s=await MB.guard('products'); if(!s) return;
+    MB.chartDefaults();
+    var d=MB.presetRange('30d'); $('dFrom').value=d[0]; $('dTo').value=d[1];
+    await loadBrandOptions();
+
+    $('selPreset').addEventListener('change',function(){
+      if(!this.value) return;
+      var x=MB.presetRange(this.value); $('dFrom').value=x[0]; $('dTo').value=x[1]; refresh();
+    });
+    $('btnApply').addEventListener('click',refresh);
+    $('btnReload').addEventListener('click',refresh);
+    $('selPlat').addEventListener('change',refresh);
+    $('selBrand').addEventListener('change',refresh);
+    $('qSku').addEventListener('input',function(){ paintCombined(rowsCombined); });
+    MB.segment($('segTop'),function(v){ topN=parseInt(v,10); refresh(); });
+    MB.segment($('segView'),function(v){
+      view=v;
+      $('viewCombined').style.display = v==='combined'?'block':'none';
+      $('viewSplit').style.display    = v==='split'?'block':'none';
+      refresh();
+    });
+    $('btnCsv').addEventListener('click',function(){
+      if(!rowsCombined.length){ MB.toast('ยังไม่มีข้อมูลให้ export','err'); return; }
+      var head=['อันดับ','SKU','ชื่อสินค้า','แบรนด์','จำนวน','ออเดอร์','GMV TikTok','GMV Lazada','GMV รวม'];
+      var body=rowsCombined.map(function(x,i){
+        return [i+1,x.sku,x.product_name,x.brand,x.qty,x.orders,x.gmv_tiktok,x.gmv_lazada,x.gmv];
+      });
+      MB.csv('top-sku-'+range()[0]+'_'+range()[1]+'.csv',[head].concat(body));
+    });
+
+    refresh();
+  })();
+})();
+</script>
+</body>
+</html>

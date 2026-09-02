@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>นำเข้าข้อมูล · MASARU Branding</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar" id="sidebar"></aside>
+  <div class="main">
+    <div class="topbar">
+      <button class="mobile-btn" id="mobileBtn">☰</button>
+      <div><h1>นำเข้าข้อมูล</h1><div class="sub">รองรับ .xlsx .xls .csv — ไฟล์จาก JST, TikTok Shop, Lazada, Creator และ Ads</div></div>
+      <div class="spacer"></div>
+      <button class="btn ghost sm" id="btnFill">เติมแบรนด์จาก SKU Master</button>
+      <button class="btn ghost sm" id="btnSync">สร้าง SKU Master จากออเดอร์</button>
+    </div>
+
+    <div class="content">
+      <!-- STEP 1 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="hd"><h3>1 · เลือกประเภทไฟล์</h3></div>
+        <div class="bd">
+          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(210px,1fr))" id="srcGrid"></div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="hd"><h3>2 · เลือกไฟล์</h3><div class="spacer"></div>
+          <span id="srcLabel" class="pill mute">ยังไม่เลือกประเภท</span></div>
+        <div class="bd">
+          <div class="dropzone" id="dz">
+            <div class="ic">⤓</div>
+            <b>ลากไฟล์มาวาง หรือคลิกเพื่อเลือก</b>
+            <span>รองรับ .xlsx .xls .csv (ไฟล์ใหญ่ควรไม่เกิน ~50,000 แถวต่อครั้ง)</span>
+          </div>
+          <input type="file" id="fileIn" accept=".xlsx,.xls,.csv" style="display:none">
+          <div id="fileInfo" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="card" style="margin-bottom:16px;display:none" id="cardMap">
+        <div class="hd"><h3>3 · จับคู่คอลัมน์</h3><div class="spacer"></div>
+          <span style="font-size:12px;color:var(--muted)">ระบบเดาให้อัตโนมัติแล้ว — ตรวจสอบและแก้ไขได้</span>
+          <button class="btn ghost sm" id="btnGuess">เดาใหม่</button></div>
+        <div class="bd">
+          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))" id="mapGrid"></div>
+          <div id="fixedNote" style="margin-top:12px"></div>
+        </div>
+      </div>
+
+      <!-- STEP 4 -->
+      <div class="card" id="cardPrev" style="display:none">
+        <div class="hd"><h3>4 · ตรวจสอบและบันทึก</h3><div class="spacer"></div>
+          <span id="prevStat" style="font-size:12.5px;color:var(--muted)"></span>
+          <button class="btn gold" id="btnImport">บันทึกเข้าฐานข้อมูล</button></div>
+        <div id="progBox" style="display:none;padding:0 16px 12px">
+          <div class="progress" style="height:9px"><i id="progBar" style="width:0%"></i></div>
+          <div style="font-size:12px;color:var(--muted);margin-top:5px" id="progTxt"></div>
+        </div>
+        <div class="tbl-wrap" style="max-height:440px;overflow:auto">
+          <table class="tbl"><thead id="prevHead"></thead><tbody id="prevBody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- LOGS -->
+      <div class="card" style="margin-top:16px">
+        <div class="hd"><h3>ประวัติการนำเข้า</h3></div>
+        <div class="tbl-wrap">
+          <table class="tbl">
+            <thead><tr><th>ไฟล์</th><th>ประเภท</th><th>ตาราง</th><th class="num">ทั้งหมด</th><th class="num">บันทึก</th><th>โดย</th><th>เวลา</th><th>สถานะ</th></tr></thead>
+            <tbody id="logBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/supabase-js/2.39.7/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="assets/app.js"></script>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+
+  /* ================= SOURCE DEFINITIONS ================= */
+  var F = function(key,label,req,alias,type){
+    return {key:key,label:label,req:!!req,alias:alias||[],type:type||'text'};
+  };
+
+  var SOURCES = {
+    JST: {
+      label:'JST (ERP) — ออเดอร์',
+      desc:'ไฟล์ export ออเดอร์จาก Jushuitan ใช้เป็นยอดขายหลัก',
+      table:'brand_orders', conflict:'platform,order_no,line_no', ic:'🗂️',
+      fixed:{ source:'JST' },
+      fields:[
+        F('order_no','เลขที่ออเดอร์',1,['order no','订单编号','เลขออเดอร์','order id','order_sn','เลขที่ใบสั่งซื้อ','platform order']),
+        F('order_date','วันที่สั่งซื้อ',1,['order date','วันที่','下单时间','created time','เวลาสั่งซื้อ','order time'],'date'),
+        F('platform','แพลตฟอร์ม',1,['platform','shop type','ช่องทาง','ร้านค้า','店铺','shop']),
+        F('shop_name','ชื่อร้าน',0,['shop name','ร้าน','店铺名称','shop']),
+        F('sku','รหัสสินค้า (SKU)',1,['sku','商品编码','รหัสสินค้า','seller sku','item sku','sku id']),
+        F('product_name','ชื่อสินค้า',0,['product name','商品名称','ชื่อสินค้า','item name','product']),
+        F('brand','แบรนด์',0,['brand','แบรนด์','品牌']),
+        F('qty','จำนวน',0,['qty','quantity','数量','จำนวน','ชิ้น'],'num'),
+        F('gmv','ยอดขาย (GMV)',1,['amount','gmv','总金额','ยอดขาย','sales','total','应收金额','subtotal'],'num'),
+        F('discount','ส่วนลด',0,['discount','优惠','ส่วนลด'],'num'),
+        F('net_sales','ยอดสุทธิ',0,['net','实收','ยอดสุทธิ','settlement','payout'],'num'),
+        F('status','สถานะ',0,['status','状态','สถานะ','order status'])
+      ]
+    },
+    TIKTOK_ORDER: {
+      label:'TikTok Shop — ออเดอร์',
+      desc:'All Orders export จาก TikTok Seller Center (มีข้อมูลครีเอเตอร์)',
+      table:'brand_orders', conflict:'platform,order_no,line_no', ic:'🎵',
+      fixed:{ platform:'TIKTOK', source:'TIKTOK' },
+      fields:[
+        F('order_no','Order ID',1,['order id','order no','เลขออเดอร์','order_id']),
+        F('order_date','วันที่',1,['created time','order date','paid time','วันที่'],'date'),
+        F('shop_name','ชื่อร้าน',0,['shop name','seller name','ร้าน']),
+        F('sku','Seller SKU',1,['seller sku','sku id','sku','รหัสสินค้า']),
+        F('product_name','ชื่อสินค้า',0,['product name','ชื่อสินค้า','item name']),
+        F('qty','จำนวน',0,['quantity','qty','จำนวน'],'num'),
+        F('gmv','ยอดขาย',1,['sku subtotal before discount','order amount','gmv','total amount','ยอดขาย'],'num'),
+        F('discount','ส่วนลด',0,['sku seller discount','discount','ส่วนลด'],'num'),
+        F('net_sales','ยอดสุทธิ',0,['sku subtotal after discount','settlement amount','ยอดสุทธิ'],'num'),
+        F('status','สถานะ',0,['order status','status','สถานะ']),
+        F('creator_name','ครีเอเตอร์',0,['creator name','affiliate creator','creator','ครีเอเตอร์','partner name']),
+        F('content_type','ประเภทคอนเทนต์',0,['content type','traffic source','source','ประเภท'])
+      ]
+    },
+    LAZADA_ORDER: {
+      label:'Lazada — ออเดอร์',
+      desc:'Order/Transaction export จาก Lazada Seller Center',
+      table:'brand_orders', conflict:'platform,order_no,line_no', ic:'🛒',
+      fixed:{ platform:'LAZADA', source:'LAZADA' },
+      fields:[
+        F('order_no','Order Number',1,['order number','orderid','order no','order id','เลขออเดอร์']),
+        F('order_date','วันที่',1,['created at','order date','วันที่','createtime'],'date'),
+        F('shop_name','ชื่อร้าน',0,['shop name','store','ร้าน']),
+        F('sku','Seller SKU',1,['seller sku','sku','รหัสสินค้า','shop sku']),
+        F('product_name','ชื่อสินค้า',0,['item name','product name','ชื่อสินค้า']),
+        F('qty','จำนวน',0,['quantity','qty','จำนวน'],'num'),
+        F('gmv','ยอดขาย',1,['unit price','paid price','item price','gmv','ยอดขาย'],'num'),
+        F('net_sales','ยอดสุทธิ',0,['seller income','payout','ยอดสุทธิ'],'num'),
+        F('status','สถานะ',0,['status','order status','สถานะ'])
+      ]
+    },
+    CREATOR: {
+      label:'ครีเอเตอร์ — ผลงานรายวัน',
+      desc:'Affiliate/Creator performance export (ใช้คำนวณอันดับและ Cancel Rate)',
+      table:'brand_creator_stats', conflict:'stat_date,platform,creator_name,content_type', ic:'⭐',
+      fixed:{ platform:'TIKTOK' },
+      fields:[
+        F('stat_date','วันที่',1,['date','วันที่','stat date','day'],'date'),
+        F('creator_name','ชื่อครีเอเตอร์',1,['creator name','creator','ครีเอเตอร์','nickname','partner name']),
+        F('creator_handle','Username',0,['username','handle','creator username','@']),
+        F('content_type','ประเภท (VDO/LIVE)',0,['content type','type','source','ประเภท']),
+        F('orders','ออเดอร์',0,['orders','sku orders','order count','ออเดอร์'],'num'),
+        F('items_sold','จำนวนชิ้น',0,['items sold','units sold','ชิ้น','quantity'],'num'),
+        F('gmv','GMV',1,['gmv','revenue','ยอดขาย','sales'],'num'),
+        F('cancelled_orders','ออเดอร์ยกเลิก',0,['cancelled orders','canceled orders','refund orders','ยกเลิก'],'num'),
+        F('cancelled_gmv','ยอดยกเลิก',0,['cancelled gmv','refund amount','ยอดยกเลิก'],'num'),
+        F('commission','ค่าคอมมิชชั่น',0,['commission','est. commission','ค่าคอม'],'num')
+      ]
+    },
+    CREATOR_SKU: {
+      label:'ครีเอเตอร์ — รายสินค้า',
+      desc:'ยอดขายแยกตาม SKU ของแต่ละครีเอเตอร์ (ใช้ทำ Top 5 SKU ต่อคน)',
+      table:'brand_creator_skus', conflict:'stat_date,platform,creator_name,sku,content_type', ic:'🎯',
+      fixed:{ platform:'TIKTOK' },
+      fields:[
+        F('stat_date','วันที่',1,['date','วันที่','stat date'],'date'),
+        F('creator_name','ชื่อครีเอเตอร์',1,['creator name','creator','ครีเอเตอร์','nickname']),
+        F('sku','SKU',1,['seller sku','sku','รหัสสินค้า']),
+        F('product_name','ชื่อสินค้า',0,['product name','ชื่อสินค้า','item name']),
+        F('content_type','ประเภท (VDO/LIVE)',0,['content type','type','source']),
+        F('qty','จำนวน',0,['items sold','quantity','qty','จำนวน'],'num'),
+        F('gmv','GMV',1,['gmv','revenue','ยอดขาย'],'num')
+      ]
+    },
+    ADS: {
+      label:'Ads — ค่าโฆษณา',
+      desc:'รายงานโฆษณา TikTok Ads / Lazada Sponsored (ใช้คำนวณ ROAS)',
+      table:'brand_ads', conflict:null, ic:'📣',
+      fixed:{},
+      fields:[
+        F('stat_date','วันที่',1,['date','วันที่','day'],'date'),
+        F('platform','แพลตฟอร์ม',1,['platform','ช่องทาง']),
+        F('shop_name','ชื่อร้าน',0,['shop name','ร้าน','account']),
+        F('campaign','แคมเปญ',0,['campaign name','campaign','แคมเปญ']),
+        F('ad_type','ประเภทโฆษณา',0,['ad type','objective','ประเภท']),
+        F('spend','ค่าใช้จ่าย',1,['cost','spend','ค่าโฆษณา','amount spent'],'num'),
+        F('gmv_attributed','ยอดขายจากแอด',0,['gross revenue','roi revenue','conversion value','ยอดขาย'],'num'),
+        F('orders','ออเดอร์',0,['orders','conversions','ออเดอร์'],'num'),
+        F('impressions','Impressions',0,['impressions','impression'],'num'),
+        F('clicks','Clicks',0,['clicks','click'],'num')
+      ]
+    },
+    SKU_MASTER: {
+      label:'SKU Master — ผูกแบรนด์',
+      desc:'ตารางรหัสสินค้า → แบรนด์ / หมวด (ทำให้รายงานแยกแบรนด์ได้ถูกต้อง)',
+      table:'brand_sku_master', conflict:'sku', ic:'🏷️',
+      fixed:{},
+      fields:[
+        F('sku','SKU',1,['sku','รหัสสินค้า','seller sku','item sku']),
+        F('product_name','ชื่อสินค้า',0,['product name','ชื่อสินค้า','name']),
+        F('brand','แบรนด์',1,['brand','แบรนด์','品牌']),
+        F('category','หมวดหมู่',0,['category','หมวด','กลุ่มสินค้า']),
+        F('cost','ต้นทุน',0,['cost','ต้นทุน'],'num'),
+        F('price','ราคาขาย',0,['price','ราคา','ราคาขาย'],'num')
+      ]
+    }
+  };
+
+  var srcKey=null, headers=[], rawRows=[], mapping={}, fileName='';
+
+  /* ================= HELPERS ================= */
+  function norm(s){ return String(s==null?'':s).toLowerCase().replace(/[\s_\-\.\(\)\[\]\/]/g,'').trim(); }
+
+  function guessCol(field){
+    var cands = [field.key, field.label].concat(field.alias);
+    // exact-ish
+    for(var i=0;i<cands.length;i++){
+      var c=norm(cands[i]);
+      for(var j=0;j<headers.length;j++){ if(norm(headers[j])===c) return headers[j]; }
+    }
+    // contains
+    for(var i2=0;i2<cands.length;i2++){
+      var c2=norm(cands[i2]); if(c2.length<3) continue;
+      for(var j2=0;j2<headers.length;j2++){ if(norm(headers[j2]).indexOf(c2)>=0) return headers[j2]; }
+    }
+    return '';
+  }
+
+  function toNum(v){
+    if(v==null||v==='') return 0;
+    if(typeof v==='number') return v;
+    var s=String(v).replace(/[฿$,\s]/g,'').replace(/[^\d.\-]/g,'');
+    var n=parseFloat(s);
+    return isNaN(n)?0:n;
+  }
+
+  function toDate(v){
+    if(v==null||v==='') return null;
+    if(v instanceof Date && !isNaN(v)) return MB.iso(v);
+    if(typeof v==='number'){ // excel serial
+      var d=new Date(Math.round((v-25569)*86400*1000));
+      return isNaN(d)?null:MB.iso(d);
+    }
+    var s=String(v).trim();
+    var m=s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+    if(m) return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+    m=s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+    if(m){ // dd/mm/yyyy (ถ้าปี พ.ศ. > 2400 ให้ลบ 543)
+      var y=parseInt(m[3],10); if(y>2400) y-=543;
+      return y+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+    }
+    var d2=new Date(s);
+    return isNaN(d2)?null:MB.iso(d2);
+  }
+
+  function normPlatform(v){
+    var s=norm(v);
+    if(!s) return null;
+    if(s.indexOf('tik')>=0||s.indexOf('tt')===0||s.indexOf('ติ๊ก')>=0) return 'TIKTOK';
+    if(s.indexOf('laz')>=0||s.indexOf('lz')===0||s.indexOf('ลาซ')>=0) return 'LAZADA';
+    return String(v).toUpperCase().slice(0,20);
+  }
+
+  function normStatus(v){
+    var s=norm(v);
+    if(!s) return 'COMPLETED';
+    if(s.indexOf('cancel')>=0||s.indexOf('ยกเลิก')>=0||s.indexOf('取消')>=0) return 'CANCELLED';
+    if(s.indexOf('return')>=0||s.indexOf('refund')>=0||s.indexOf('คืน')>=0) return 'RETURNED';
+    if(s.indexOf('ship')>=0||s.indexOf('transit')>=0||s.indexOf('จัดส่ง')>=0) return 'SHIPPING';
+    if(s.indexOf('pend')>=0||s.indexOf('unpaid')>=0||s.indexOf('รอ')>=0) return 'PENDING';
+    return 'COMPLETED';
+  }
+
+  function normContent(v){
+    var s=norm(v);
+    if(s.indexOf('live')>=0||s.indexOf('ไลฟ์')>=0) return 'LIVE';
+    if(s.indexOf('video')>=0||s.indexOf('vdo')>=0||s.indexOf('short')>=0||s.indexOf('วิดีโอ')>=0) return 'VDO';
+    if(s.indexOf('ads')>=0||s.indexOf('โฆษณา')>=0) return 'ADS';
+    if(!s) return 'VDO';
+    return 'SHOP';
+  }
+
+  /* ================= UI: SOURCE PICKER ================= */
+  function renderSources(){
+    $('srcGrid').innerHTML = Object.keys(SOURCES).map(function(k){
+      var s=SOURCES[k];
+      return '<div class="hub-card" data-k="'+k+'" style="min-height:120px;padding:15px;cursor:pointer">'+
+        '<div style="display:flex;align-items:center;gap:9px">'+
+          '<div style="font-size:22px">'+s.ic+'</div>'+
+          '<b style="font-size:13.5px">'+MB.esc(s.label)+'</b></div>'+
+        '<p style="font-size:12px">'+MB.esc(s.desc)+'</p></div>';
+    }).join('');
+    $('srcGrid').querySelectorAll('[data-k]').forEach(function(el){
+      el.addEventListener('click',function(){
+        srcKey=el.dataset.k;
+        $('srcGrid').querySelectorAll('[data-k]').forEach(function(x){
+          x.style.borderColor='var(--line)'; x.style.background='#fff'; });
+        el.style.borderColor='var(--blue)'; el.style.background='var(--blue-soft)';
+        $('srcLabel').textContent=SOURCES[srcKey].label;
+        $('srcLabel').className='pill vdo';
+        if(rawRows.length) buildMapping();
+      });
+    });
+  }
+
+  /* ================= FILE READ ================= */
+  function readFile(file){
+    fileName=file.name;
+    var fr=new FileReader();
+    fr.onload=function(e){
+      try{
+        var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+        var ws=wb.Sheets[wb.SheetNames[0]];
+        var arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false,raw:true});
+        if(!arr.length) throw new Error('ไฟล์ว่าง');
+        // หาแถว header (แถวแรกที่มีค่าไม่ว่างอย่างน้อย 3 ช่อง)
+        var hi=0;
+        for(var i=0;i<Math.min(arr.length,12);i++){
+          var cnt=arr[i].filter(function(c){return String(c).trim()!=='';}).length;
+          if(cnt>=3){ hi=i; break; }
+        }
+        headers=arr[hi].map(function(h,i){ return String(h).trim()||('คอลัมน์ '+(i+1)); });
+        rawRows=arr.slice(hi+1).filter(function(r){
+          return r.some(function(c){ return String(c).trim()!==''; });
+        }).map(function(r){
+          var o={}; headers.forEach(function(h,i){ o[h]=r[i]; }); return o;
+        });
+        $('fileInfo').innerHTML='<div class="insight good"><div class="ic">📄</div><div>'+
+          '<b>'+MB.esc(fileName)+'</b><span>'+MB.fmt.n(rawRows.length)+' แถว · '+headers.length+' คอลัมน์ (header อยู่แถวที่ '+(hi+1)+')</span></div></div>';
+        if(!srcKey){ MB.toast('เลือกประเภทไฟล์ในขั้นตอนที่ 1 ก่อน','err'); return; }
+        buildMapping();
+      }catch(err){
+        $('fileInfo').innerHTML='<div class="insight bad"><div class="ic">⚠️</div><div><b>อ่านไฟล์ไม่สำเร็จ</b><span>'+MB.esc(err.message||err)+'</span></div></div>';
+      }
+    };
+    fr.readAsArrayBuffer(file);
+  }
+
+  /* ================= MAPPING ================= */
+  function buildMapping(){
+    var s=SOURCES[srcKey];
+    mapping={};
+    s.fields.forEach(function(f){ mapping[f.key]=guessCol(f); });
+    renderMapping();
+    renderPreview();
+  }
+
+  function renderMapping(){
+    var s=SOURCES[srcKey];
+    $('cardMap').style.display='block';
+    $('mapGrid').innerHTML=s.fields.map(function(f){
+      var opts='<option value="">— ไม่ใช้ —</option>'+headers.map(function(h){
+        return '<option value="'+MB.esc(h)+'"'+(mapping[f.key]===h?' selected':'')+'>'+MB.esc(h)+'</option>';
+      }).join('');
+      var warn = f.req && !mapping[f.key];
+      return '<div class="field"><label>'+MB.esc(f.label)+
+        (f.req?' <span style="color:var(--red)">*</span>':'')+'</label>'+
+        '<select data-f="'+f.key+'" style="min-width:100%'+(warn?';border-color:var(--red)':'')+'">'+opts+'</select></div>';
+    }).join('');
+    $('mapGrid').querySelectorAll('select[data-f]').forEach(function(sel){
+      sel.addEventListener('change',function(){
+        mapping[sel.dataset.f]=sel.value;
+        sel.style.borderColor='';
+        renderPreview();
+      });
+    });
+    var fx=Object.keys(s.fixed||{});
+    $('fixedNote').innerHTML = fx.length
+      ? '<div class="insight"><div class="ic">🔒</div><div><b>ค่าที่ระบบกำหนดให้อัตโนมัติ</b><span>'+
+        fx.map(function(k){return k+' = '+s.fixed[k];}).join(' · ')+'</span></div></div>' : '';
+  }
+
+  /* ================= TRANSFORM ================= */
+  function transform(){
+    var s=SOURCES[srcKey], out=[], seen={}, skipped=0;
+    rawRows.forEach(function(r,idx){
+      var o={};
+      var bad=false;
+      s.fields.forEach(function(f){
+        var col=mapping[f.key];
+        var v = col ? r[col] : null;
+        if(f.type==='num') o[f.key]=toNum(v);
+        else if(f.type==='date'){ o[f.key]=toDate(v); }
+        else o[f.key] = (v==null||v==='') ? null : String(v).trim();
+        if(f.req && (o[f.key]==null || o[f.key]==='' || (f.type==='num' && f.key==='gmv' && false))) bad=true;
+      });
+      if(bad){ skipped++; return; }
+      Object.keys(s.fixed||{}).forEach(function(k){ if(!o[k]) o[k]=s.fixed[k]; });
+
+      if(s.table==='brand_orders'){
+        o.platform = normPlatform(o.platform) || s.fixed.platform || 'TIKTOK';
+        o.status   = normStatus(o.status);
+        o.content_type = o.content_type ? normContent(o.content_type) : (o.creator_name?'VDO':'SHOP');
+        if(!o.net_sales) o.net_sales = (o.gmv||0) - (o.discount||0);
+        var key=o.platform+'|'+o.order_no+'|'+(o.sku||'');
+        seen[key]=(seen[key]||0)+1;
+        o.line_no=seen[key];
+      }
+      if(s.table==='brand_creator_stats' || s.table==='brand_creator_skus'){
+        o.content_type = normContent(o.content_type);
+        o.platform = o.platform || 'TIKTOK';
+      }
+      if(s.table==='brand_ads'){ o.platform=normPlatform(o.platform)||'TIKTOK'; }
+      if(s.table==='brand_sku_master'){ o.brand=String(o.brand||'').toUpperCase(); }
+      out.push(o);
+    });
+
+    // รวมแถวซ้ำสำหรับตารางที่มี unique key แบบ aggregate
+    if(s.table==='brand_creator_stats'||s.table==='brand_creator_skus'){
+      var m={};
+      out.forEach(function(o){
+        var k=[o.stat_date,o.platform,o.creator_name,o.sku||'',o.content_type].join('|');
+        if(!m[k]) m[k]=o;
+        else{
+          ['orders','items_sold','gmv','cancelled_orders','cancelled_gmv','commission','qty'].forEach(function(f){
+            if(typeof o[f]==='number') m[k][f]=(m[k][f]||0)+o[f];
+          });
+        }
+      });
+      out=Object.keys(m).map(function(k){return m[k];});
+    }
+    return {rows:out, skipped:skipped};
+  }
+
+  function renderPreview(){
+    if(!srcKey||!rawRows.length) return;
+    var s=SOURCES[srcKey];
+    var missing=s.fields.filter(function(f){ return f.req && !mapping[f.key]; });
+    $('cardPrev').style.display='block';
+    if(missing.length){
+      $('prevHead').innerHTML='';
+      $('prevBody').innerHTML='<tr><td><div class="insight bad"><div class="ic">⚠️</div><div>'+
+        '<b>ยังจับคู่คอลัมน์ไม่ครบ</b><span>ต้องเลือก: '+missing.map(function(f){return f.label;}).join(', ')+'</span></div></div></td></tr>';
+      $('prevStat').textContent=''; $('btnImport').disabled=true;
+      return;
+    }
+    var t=transform();
+    window.__payload=t.rows;
+    $('btnImport').disabled = !t.rows.length;
+    $('prevStat').textContent = 'พร้อมบันทึก '+MB.fmt.n(t.rows.length)+' แถว'+
+      (t.skipped?' · ข้าม '+MB.fmt.n(t.skipped)+' แถว (ข้อมูลจำเป็นว่าง)':'')+
+      ' → ตาราง '+s.table;
+
+    var cols=s.fields.map(function(f){return f.key;});
+    Object.keys(s.fixed||{}).forEach(function(k){ if(cols.indexOf(k)<0) cols.push(k); });
+    if(s.table==='brand_orders' && cols.indexOf('line_no')<0) cols.push('line_no');
+    $('prevHead').innerHTML='<tr>'+cols.map(function(c){return '<th>'+MB.esc(c)+'</th>';}).join('')+'</tr>';
+    $('prevBody').innerHTML=t.rows.slice(0,25).map(function(o){
+      return '<tr>'+cols.map(function(c){
+        var v=o[c]; if(v==null) v='';
+        if(typeof v==='number') v = Number.isInteger(v) ? MB.fmt.n(v) : MB.fmt.m(v);
+        return '<td>'+MB.esc(v)+'</td>';
+      }).join('')+'</tr>';
+    }).join('') || '<tr><td><div class="empty">ไม่มีแถวที่ผ่านเงื่อนไข</div></td></tr>';
+  }
+
+  /* ================= IMPORT ================= */
+  async function doImport(){
+    var s=SOURCES[srcKey], rows=window.__payload||[];
+    if(!rows.length){ MB.toast('ไม่มีข้อมูลให้บันทึก','err'); return; }
+    if(!confirm('บันทึก '+MB.fmt.n(rows.length)+' แถว เข้าตาราง '+s.table+' ?')) return;
+    var who=(MB.state.profile&&MB.state.profile.full_name)||MB.state.user.email;
+    $('btnImport').disabled=true; $('progBox').style.display='block';
+    var ok=0, msg='';
+    try{
+      ok = await MB.chunkUpsert(s.table, rows, {
+        onConflict: s.conflict || undefined,
+        size: 400,
+        onProgress: function(d,t){
+          var p=d/t*100;
+          $('progBar').style.width=p.toFixed(1)+'%';
+          $('progTxt').textContent='บันทึกแล้ว '+MB.fmt.n(d)+' / '+MB.fmt.n(t)+' แถว';
+        }
+      });
+      MB.toast('บันทึกสำเร็จ '+MB.fmt.n(ok)+' แถว','ok');
+    }catch(e){
+      msg=e.message||String(e);
+      MB.toast('บันทึกไม่สำเร็จ: '+msg,'err');
+    }
+    try{
+      await MB.sb.from('brand_import_logs').insert({
+        file_name:fileName, source:srcKey, target_table:s.table,
+        rows_total:rawRows.length, rows_inserted:ok, rows_skipped:rawRows.length-ok,
+        status: msg?'FAILED':'SUCCESS', message:msg||null, imported_by:who
+      });
+    }catch(e){}
+    $('btnImport').disabled=false;
+    $('progTxt').textContent = msg ? 'ผิดพลาด: '+msg : 'เสร็จสิ้น';
+    loadLogs();
+    if(!msg && s.table==='brand_orders'){
+      try{ await MB.rpc('brand_fill_brands'); }catch(e){}
+    }
+  }
+
+  /* ================= LOGS ================= */
+  async function loadLogs(){
+    var tb=$('logBody'); MB.tableLoading(tb,8);
+    try{
+      var r=await MB.sb.from('brand_import_logs').select('*').order('created_at',{ascending:false}).limit(20);
+      if(r.error) throw r.error;
+      var rows=r.data||[];
+      if(!rows.length){ MB.tableEmpty(tb,8,'ยังไม่มีประวัติ'); return; }
+      tb.innerHTML=rows.map(function(x){
+        return '<tr><td>'+MB.esc(x.file_name||'-')+'</td>'+
+          '<td><span class="pill mute">'+MB.esc(x.source||'-')+'</span></td>'+
+          '<td style="font-size:12px;color:var(--muted)">'+MB.esc(x.target_table||'-')+'</td>'+
+          '<td class="num">'+MB.fmt.n(x.rows_total)+'</td>'+
+          '<td class="num"><b>'+MB.fmt.n(x.rows_inserted)+'</b></td>'+
+          '<td>'+MB.esc(x.imported_by||'-')+'</td>'+
+          '<td>'+MB.fmt.dt(x.created_at)+'</td>'+
+          '<td><span class="pill '+(x.status==='SUCCESS'?'up':'down')+'">'+MB.esc(x.status)+'</span></td></tr>';
+      }).join('');
+    }catch(e){ MB.tableEmpty(tb,8,'โหลดไม่สำเร็จ: '+(e.message||e)); }
+  }
+
+  /* ================= BOOT ================= */
+  (async function(){
+    var s=await MB.guard('import',{role:'manager'}); if(!s) return;
+    renderSources();
+    loadLogs();
+
+    $('dz').addEventListener('click',function(){ $('fileIn').click(); });
+    $('fileIn').addEventListener('change',function(){ if(this.files[0]) readFile(this.files[0]); });
+    ['dragenter','dragover'].forEach(function(ev){
+      $('dz').addEventListener(ev,function(e){ e.preventDefault(); this.classList.add('drag'); });
+    });
+    ['dragleave','drop'].forEach(function(ev){
+      $('dz').addEventListener(ev,function(e){ e.preventDefault(); this.classList.remove('drag'); });
+    });
+    $('dz').addEventListener('drop',function(e){
+      if(e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);
+    });
+    $('btnGuess').addEventListener('click',buildMapping);
+    $('btnImport').addEventListener('click',doImport);
+
+    $('btnFill').addEventListener('click',async function(){
+      this.disabled=true;
+      try{ var n=await MB.rpc('brand_fill_brands'); MB.toast('เติมแบรนด์ให้ '+MB.fmt.n(n)+' แถวแล้ว','ok'); }
+      catch(e){ MB.toast(e.message||e,'err'); }
+      this.disabled=false;
+    });
+    $('btnSync').addEventListener('click',async function(){
+      if(!confirm('สร้าง/อัปเดต SKU Master จาก SKU ทั้งหมดในตารางออเดอร์?')) return;
+      this.disabled=true;
+      try{ var n=await MB.rpc('brand_sync_sku_master'); MB.toast('ซิงก์ SKU Master แล้ว ('+MB.fmt.n(n)+' รายการ)','ok'); }
+      catch(e){ MB.toast(e.message||e,'err'); }
+      this.disabled=false;
+    });
+  })();
+})();
+</script>
+</body>
+</html>
