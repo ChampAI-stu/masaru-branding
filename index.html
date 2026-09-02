@@ -8,8 +8,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="assets/style.css?v=3">
-<script src="assets/boot.js?v=3"></script>
+<link rel="stylesheet" href="assets/style.css?v=5">
+<script src="assets/boot.js?v=5"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -48,10 +48,11 @@
       <div class="fld"><label>ตำแหน่งงาน</label>
         <select id="upRole"><option value="">— กำลังโหลด —</option></select>
         <div class="hint" id="roleHint">ตำแหน่งเป็นตัวกำหนดว่าคุณเห็นระบบไหนได้บ้าง</div></div>
-      <div class="fld"><label>รหัสเชิญ</label><input type="text" id="upCode" placeholder="MASARU-BRAND"></div>
+      <div class="fld"><label>รหัสเชิญ</label><input type="text" id="upCode" placeholder="MASARU-BRAND-2569"></div>
       <button class="btn-primary btn-accent" id="btnSignup"><i class="ti ti-user-plus"></i> สมัครสมาชิก</button>
       <div class="msg" id="msgUp"></div>
       <div class="switch-line">มีบัญชีแล้ว? <span class="link" id="toSignin">เข้าสู่ระบบ</span></div>
+      <div class="hint" style="text-align:center;margin-top:10px" id="verTag"></div>
     </div>
   </div>
 </div>
@@ -85,7 +86,7 @@
   </main>
 </div>
 
-<script src="assets/app.js?v=3"></script>
+<script src="assets/app.js?v=5"></script>
 <script>if(window.__boot && !window.__bootCheckLibs()) throw new Error("boot-halt");</script>
 <script>
 (function(){
@@ -106,12 +107,7 @@
 
   /* ---------- ตำแหน่งสำหรับหน้าสมัคร ---------- */
   var ROLE_FALLBACK=[
-    {code:'manager',name_th:'ผู้จัดการแบรนด์',description:'ดูรายงานทั้งหมด นำเข้าข้อมูล ตั้งเป้า'},
-    {code:'analyst',name_th:'นักวิเคราะห์ข้อมูล',description:'ดูรายงานและนำเข้าข้อมูล'},
-    {code:'creator',name_th:'ดูแลครีเอเตอร์ / KOL',description:'ดูแลครีเอเตอร์ อันดับ และ Blacklist'},
-    {code:'marketing',name_th:'การตลาด',description:'ดูรายงานยอดขาย สินค้า และครีเอเตอร์'},
-    {code:'sales',name_th:'ฝ่ายขาย / Sale Admin',description:'ดูยอดขายและสินค้าขายดี'},
-    {code:'viewer',name_th:'ดูอย่างเดียว',description:'ดูภาพรวมยอดขายเท่านั้น'}
+    {code:'branding',name_th:'ทีมแบรนดิ้ง',description:'เข้าใช้งานได้ทุกระบบของฝ่ายแบรนดิ้ง'}
   ];
   async function loadRoles(){
     var rows=ROLE_FALLBACK;
@@ -155,7 +151,10 @@
         pass=$('upPass').value, role=$('upRole').value, code=$('upCode').value.trim();
     if(!name||!email||!pass){ say('msgUp','กรอกข้อมูลให้ครบ','err'); return; }
     if(!role){ say('msgUp','เลือกตำแหน่งงานของคุณ','err'); return; }
-    if(code!==MB.CFG.inviteCode){ say('msgUp','รหัสเชิญไม่ถูกต้อง','err'); return; }
+    if(!MB.checkInvite(code)){
+      say('msgUp','รหัสเชิญไม่ถูกต้อง — '+MB.inviteHint(),'err');
+      return;
+    }
     if(pass.length<6){ say('msgUp','รหัสผ่านต้องยาวอย่างน้อย 6 ตัว','err'); return; }
     this.disabled=true; say('msgUp','กำลังสมัคร…');
     var r=await MB.sb.auth.signUp({email:email,password:pass,options:{data:{full_name:name,role:role}}});
@@ -165,6 +164,7 @@
     else say('msgUp','สมัครสำเร็จ — กรุณายืนยันอีเมลแล้วเข้าสู่ระบบ','ok');
   };
 
+  $('verTag').textContent=MB.inviteHint();
   $('btnOut').onclick=MB.signOut;
   // logout ที่แท็บใดก็ตาม → กลับหน้า login ทันที
   if(MB.sb.auth.onAuthStateChange){
