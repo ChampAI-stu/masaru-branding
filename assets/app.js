@@ -55,7 +55,7 @@
   const CFG = {
     url: 'https://espxzszehvtcbiudwfit.supabase.co',
     key: 'sb_publishable_0I3vRvYoFE_8Fi6x_X2-CA_iGhN_JO7',
-    version: 'v7',
+    version: 'v8',
     // รับได้หลายรหัส (กันกรณีเบราว์เซอร์ยังใช้ไฟล์เก่า / คนจำรหัสเดิม)
     inviteCode: 'MASARU-BRAND-2569',
     inviteCodes: ['MASARU-BRAND-2569', 'MASARU-BRAND'],
