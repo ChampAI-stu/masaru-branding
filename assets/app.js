@@ -55,7 +55,7 @@
   const CFG = {
     url: 'https://espxzszehvtcbiudwfit.supabase.co',
     key: 'sb_publishable_0I3vRvYoFE_8Fi6x_X2-CA_iGhN_JO7',
-    version: 'v6',
+    version: 'v7',
     // รับได้หลายรหัส (กันกรณีเบราว์เซอร์ยังใช้ไฟล์เก่า / คนจำรหัสเดิม)
     inviteCode: 'MASARU-BRAND-2569',
     inviteCodes: ['MASARU-BRAND-2569', 'MASARU-BRAND'],
@@ -367,14 +367,6 @@
       });
     }
 
-    const others = state.roots.filter(function (r) { return r.code !== rootCode; });
-    if (others.length) {
-      html += '<div class="grp">ระบบอื่นที่เข้าได้</div>';
-      others.forEach(function (r) {
-        html += '<a href="' + esc(linkOf(r)) + '"><span class="ic"><i class="ti ' + esc(r.icon || 'ti-apps') + '"></i></span>' +
-                esc(r.name) + '</a>';
-      });
-    }
     html += '</nav>';
 
     const name = (state.profile && state.profile.full_name) ||
