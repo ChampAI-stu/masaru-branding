@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="assets/style.css?v=3">
-<script src="assets/boot.js?v=3"></script>
+<link rel="stylesheet" href="assets/style.css?v=8">
+<script src="assets/boot.js?v=8"></script>
 </head>
 <body>
 
@@ -16,7 +16,7 @@
   <aside class="sidebar" id="sidebar"></aside>
   <div class="main">
     <div class="topbar">
-      <button class="mobile-btn" id="mobileBtn"><i class="ti ti-menu-2"></i></button>
+      <button class="mobile-btn" id="mobileBtn" aria-label="เมนู">☰</button>
       <div><h1>Dashboard ภาพรวม</h1><div class="sub" id="rangeLabel">—</div></div>
       <div class="spacer"></div>
       <button class="btn ghost sm" id="btnPrint">พิมพ์ / PDF</button>
@@ -24,36 +24,45 @@
     </div>
 
     <div class="content">
-      <!-- FILTERS -->
-      <div class="filters">
-        <div class="field"><label>ตั้งแต่วันที่</label><input type="date" id="dFrom"></div>
-        <div class="field"><label>ถึงวันที่</label><input type="date" id="dTo"></div>
-        <div class="field"><label>ช่วงสำเร็จรูป</label>
-          <select id="selPreset">
-            <option value="">— กำหนดเอง —</option>
-            <option value="today">วันนี้</option>
-            <option value="7d">7 วันล่าสุด</option>
-            <option value="30d" selected>30 วันล่าสุด</option>
-            <option value="mtd">เดือนนี้</option>
-            <option value="lastm">เดือนก่อน</option>
-            <option value="ytd">ตั้งแต่ต้นปี</option>
-          </select>
+      <!-- แถบเครื่องมือ: กดชิปเดียวได้เลย -->
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <span class="lbl">ช่วงเวลา</span>
+          <div class="chips" id="chipRange">
+            <button class="chip-btn" data-v="today">วันนี้</button>
+            <button class="chip-btn" data-v="7d">7 วัน</button>
+            <button class="chip-btn on" data-v="30d">30 วัน</button>
+            <button class="chip-btn" data-v="mtd">เดือนนี้</button>
+            <button class="chip-btn" data-v="lastm">เดือนก่อน</button>
+            <button class="chip-btn" data-v="ytd">ต้นปีถึงวันนี้</button>
+          </div>
+          <div class="spacer"></div>
+          <button class="adv-toggle" id="advBtn">
+            <i class="ti ti-chevron-down"></i> ตัวกรองเพิ่มเติม
+          </button>
         </div>
-        <div class="field"><label>แบรนด์</label>
-          <select id="selBrand"><option value="ALL">ทุกแบรนด์</option></select>
+
+        <div class="toolbar-row">
+          <span class="lbl">แพลตฟอร์ม</span>
+          <div class="chips" id="chipPlat">
+            <button class="chip-btn on" data-v="ALL">ทั้งหมด</button>
+            <button class="chip-btn" data-v="TIKTOK"><i class="ti ti-brand-tiktok"></i> TikTok</button>
+            <button class="chip-btn" data-v="LAZADA"><i class="ti ti-shopping-bag"></i> Lazada</button>
+          </div>
         </div>
-        <div class="field"><label>แพลตฟอร์ม</label>
-          <select id="selPlat">
-            <option value="ALL">ทุกแพลตฟอร์ม</option>
-            <option value="TIKTOK">TikTok Shop</option>
-            <option value="LAZADA">Lazada</option>
-          </select>
+
+        <div class="toolbar-row adv-body" id="advBody">
+          <div class="field"><label>ตั้งแต่วันที่</label><input type="date" id="dFrom"></div>
+          <div class="field"><label>ถึงวันที่</label><input type="date" id="dTo"></div>
+          <div class="field"><label>แบรนด์</label>
+            <select id="selBrand"><option value="ALL">ทุกแบรนด์</option></select></div>
+          <button class="btn" id="btnApply"><i class="ti ti-search"></i> ดูข้อมูลตามนี้</button>
         </div>
-        <button class="btn" id="btnApply">ดูข้อมูล</button>
       </div>
 
-      <!-- KPI -->
-      <div class="grid kpi-row" id="kpiRow" style="margin-bottom:16px"></div>
+      <!-- KPI เด่น 3 ตัว + ตัวรอง 3 ตัว -->
+      <div class="hero-kpi" id="heroRow"></div>
+      <div class="mini-row" id="miniRow"></div>
 
       <!-- CHART + DONUT -->
       <div class="grid" style="grid-template-columns:minmax(0,2.1fr) minmax(0,1fr);margin-bottom:16px" id="rowCharts">
@@ -78,9 +87,6 @@
         </div>
       </div>
 
-      <!-- COMPARISON CARDS -->
-      <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr));margin-bottom:16px" id="cmpRow"></div>
-
       <!-- INSIGHTS + BRAND MIX -->
       <div class="grid" style="grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);margin-bottom:16px" id="rowInsight">
         <div class="card">
@@ -95,13 +101,8 @@
 
       <!-- TOP PRODUCTS -->
       <div class="card">
-        <div class="hd"><h3>Top Products</h3><div class="spacer"></div>
-          <div class="seg" id="segTop">
-            <button data-v="10" class="on">Top 10</button>
-            <button data-v="20">Top 20</button>
-            <button data-v="50">Top 50</button>
-          </div>
-          <a class="btn ghost sm" href="products.html">ดูทั้งหมด →</a>
+        <div class="hd"><h3>สินค้าขายดี 5 อันดับ</h3><div class="spacer"></div>
+          <a class="btn ghost sm" href="products.html"><i class="ti ti-list-search"></i> ดูอันดับทั้งหมด</a>
         </div>
         <div class="tbl-wrap">
           <table class="tbl">
@@ -119,7 +120,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="assets/app.js?v=3"></script>
+<script src="assets/app.js?v=8"></script>
 <script>if(window.__boot && !window.__bootCheckLibs()) throw new Error("boot-halt");</script>
 
 
@@ -127,56 +128,64 @@
 (function(){
   'use strict';
   var $=function(id){return document.getElementById(id);};
-  var grain='day', topN=10, charts={}, cache={};
+  var grain='day', topN=5, charts={}, cache={};
 
   function range(){ return [$('dFrom').value, $('dTo').value]; }
   function brand(){ return $('selBrand').value; }
-  function plat(){ return $('selPlat').value; }
+  function plat(){ var b=$('chipPlat').querySelector('button.on'); return b?b.dataset.v:'ALL'; }
 
-  /* ---------- KPI ---------- */
-  function kpiCard(cls,label,value,foot,bar){
-    return '<div class="kpi '+cls+'"><div class="lb">'+label+'</div><div class="vl">'+value+'</div>'+
-      (foot?'<div class="ft">'+foot+'</div>':'')+
-      (bar!=null?'<div class="progress"><i style="width:'+Math.min(100,bar).toFixed(0)+'%"></i></div>':'')+'</div>';
+  /* ---------- KPI (เด่น 3 + รอง 3) ---------- */
+  function ring(pct){
+    var p=Math.max(0,Math.min(100,pct)), r=32, c=2*Math.PI*r;
+    return '<div class="ring"><svg width="78" height="78" viewBox="0 0 78 78">'+
+      '<circle cx="39" cy="39" r="'+r+'" fill="none" stroke="#e2e7ef" stroke-width="7"/>'+
+      '<circle cx="39" cy="39" r="'+r+'" fill="none" stroke="'+(p>=100?'#1c7a55':p>=80?'#d6a020':'#d62030')+'" '+
+      'stroke-width="7" stroke-linecap="round" stroke-dasharray="'+c.toFixed(1)+'" '+
+      'stroke-dashoffset="'+(c*(1-p/100)).toFixed(1)+'"/></svg>'+
+      '<div class="rt">'+Math.round(p)+'%</div></div>';
+  }
+  function hero(cls,icon,label,value,foot){
+    return '<div class="hero-card '+cls+'"><i class="ti '+icon+' hicon"></i>'+
+      '<div class="hl">'+label+'</div><div class="hv">'+value+'</div>'+
+      (foot?'<div class="hf">'+foot+'</div>':'')+'</div>';
+  }
+  function mini(label,value,foot){
+    return '<div class="mini"><div class="ml">'+label+'</div><div class="mv">'+value+'</div>'+
+      (foot?'<div class="mf">'+foot+'</div>':'')+'</div>';
   }
 
   async function loadKpi(){
     var r=range();
     var k = await MB.rpc('brand_kpi',{p_from:r[0],p_to:r[1],p_platform:plat(),p_brand:brand()});
     cache.kpi=k;
-    var ach = k.target>0 ? k.gmv/k.target*100 : 0;
-    var aov = k.orders>0 ? k.gmv/k.orders : 0;
+    var ach  = k.target>0 ? k.gmv/k.target*100 : 0;
+    var aov  = k.orders>0 ? k.gmv/k.orders : 0;
     var roas = k.ad_spend>0 ? k.ads_gmv/k.ad_spend : 0;
-    $('kpiRow').innerHTML =
-      kpiCard('navy','Total GMV', MB.fmt.baht(k.gmv), MB.fmt.n(k.qty)+' ชิ้น') +
-      kpiCard('gold','Target', k.target>0?MB.fmt.baht(k.target):'ยังไม่ตั้ง', k.target>0?'เป้าเดือนในช่วงที่เลือก':'ตั้งค่าที่หน้า Settings') +
-      kpiCard('green','Achievement', k.target>0?MB.fmt.pct(ach):'—', k.target>0?(k.gmv>=k.target?'ทะลุเป้าแล้ว 🎉':'ขาดอีก '+MB.fmt.baht(k.target-k.gmv)):'', k.target>0?ach:null) +
-      kpiCard('','Orders', MB.fmt.n(k.orders), 'ยกเลิก '+MB.fmt.n(k.cancelled)) +
-      kpiCard('','AOV', MB.fmt.baht(aov), 'ต่อออเดอร์') +
-      kpiCard('navy','Net Sales', MB.fmt.baht(k.net_sales), k.gmv>0?('คิดเป็น '+MB.fmt.pct(k.net_sales/k.gmv*100)+' ของ GMV'):'') ;
 
-    /* comparison cards */
+    // 3 ตัวเลขที่ต้องรู้ก่อน
+    var achCard = k.target>0
+      ? '<div class="hero-card"><div class="ring-wrap">'+ring(ach)+
+        '<div><div class="hl">Achievement</div>'+
+        '<div class="hf" style="margin-top:4px">เป้า '+MB.fmt.baht(k.target)+'</div>'+
+        '<div class="hf" style="font-weight:700;color:'+(k.gmv>=k.target?'#1c7a55':'#d62030')+'">'+
+        (k.gmv>=k.target?'ทะลุเป้าแล้ว':'ขาดอีก '+MB.fmt.baht(k.target-k.gmv))+'</div>'+
+        '</div></div></div>'
+      : hero('','ti-target','Achievement','—','ยังไม่ตั้งเป้าเดือนนี้ — ตั้งได้ที่หน้าตั้งค่า');
+
+    $('heroRow').innerHTML =
+      hero('','ti-cash','ยอดขายรวม (GMV)',MB.fmt.baht(k.gmv), MB.fmt.n(k.qty)+' ชิ้น · '+MB.fmt.n(k.orders)+' ออเดอร์') +
+      achCard +
+      hero('accent','ti-shopping-cart','ออเดอร์',MB.fmt.n(k.orders),'ยกเลิก '+MB.fmt.n(k.cancelled)+' ออเดอร์');
+
+    // ตัวรอง
     var tt=Number(k.gmv_tiktok)||0, lz=Number(k.gmv_lazada)||0, tot=tt+lz;
-    $('cmpRow').innerHTML =
-      cmpCard('TikTok Shop','tiktok',tt, tot?tt/tot*100:0) +
-      cmpCard('Lazada','lazada',lz, tot?lz/tot*100:0) +
-      '<div class="card"><div class="bd">'+
-        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-          '<span class="pill warn">ADS</span><b style="font-size:14px">Ads · ROAS</b></div>'+
-        '<div style="font-size:26px;font-weight:800;letter-spacing:-.8px">'+(k.ad_spend>0?roas.toFixed(2)+'x':'—')+'</div>'+
-        '<div style="color:var(--muted);font-size:12.5px;margin-top:2px">ค่าโฆษณา '+MB.fmt.baht(k.ad_spend)+
-        ' · ยอดจากแอด '+MB.fmt.baht(k.ads_gmv)+'</div>'+
-      '</div></div>';
-  }
+    $('miniRow').innerHTML =
+      mini('AOV', MB.fmt.baht(aov), 'ต่อออเดอร์') +
+      mini('Net Sales', MB.fmt.baht(k.net_sales), k.gmv>0?MB.fmt.pct(k.net_sales/k.gmv*100)+' ของ GMV':'') +
+      mini('TikTok', MB.fmt.short(tt), tot?MB.fmt.pct(tt/tot*100)+' ของยอดรวม':'') +
+      mini('Lazada', MB.fmt.short(lz), tot?MB.fmt.pct(lz/tot*100)+' ของยอดรวม':'') +
+      mini('ROAS', k.ad_spend>0?roas.toFixed(2)+'x':'—', k.ad_spend>0?'ค่าแอด '+MB.fmt.short(k.ad_spend):'ยังไม่มีข้อมูลแอด');
 
-  function cmpCard(name,cls,val,share){
-    return '<div class="card"><div class="bd">'+
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">'+
-      '<span class="pill '+cls+'">'+name+'</span></div>'+
-      '<div style="font-size:26px;font-weight:800;letter-spacing:-.8px">'+MB.fmt.baht(val)+'</div>'+
-      '<div class="progress"><i style="width:'+share.toFixed(0)+'%"></i></div>'+
-      '<div style="color:var(--muted);font-size:12.5px;margin-top:5px">สัดส่วน '+MB.fmt.pct(share)+' ของยอดรวม</div>'+
-      '</div></div>';
   }
 
   /* ---------- SALES CHART ---------- */
@@ -418,17 +427,29 @@
     $('dFrom').value=d[0]; $('dTo').value=d[1];
     await loadBrandOptions();
 
-    $('selPreset').addEventListener('change',function(){
-      if(!this.value) return;
-      var x=MB.presetRange(this.value); $('dFrom').value=x[0]; $('dTo').value=x[1]; refresh();
+    // ชิปช่วงเวลา
+    $('chipRange').addEventListener('click',function(e){
+      var b=e.target.closest('button[data-v]'); if(!b) return;
+      this.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');
+      var x=MB.presetRange(b.dataset.v); $('dFrom').value=x[0]; $('dTo').value=x[1]; refresh();
+    });
+    // ชิปแพลตฟอร์ม
+    $('chipPlat').addEventListener('click',function(e){
+      var b=e.target.closest('button[data-v]'); if(!b) return;
+      this.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on'); refresh();
+    });
+    // ตัวกรองเพิ่มเติม
+    $('advBtn').addEventListener('click',function(){
+      this.classList.toggle('open');
+      $('advBody').classList.toggle('open');
     });
     $('btnApply').addEventListener('click',refresh);
     $('btnReload').addEventListener('click',refresh);
     $('btnPrint').addEventListener('click',function(){ window.print(); });
     $('selBrand').addEventListener('change',refresh);
-    $('selPlat').addEventListener('change',refresh);
     MB.segment($('segGrain'),function(v){ grain=v; loadSales(); });
-    MB.segment($('segTop'),function(v){ topN=parseInt(v,10); loadTop(); });
 
     if(window.innerWidth<1100){
       $('rowCharts').style.gridTemplateColumns='1fr';
