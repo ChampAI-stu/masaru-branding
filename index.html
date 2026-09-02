@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MASARU · ศูนย์รวมระบบฝ่ายแบรนดิ้ง</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="assets/style.css?v=3">
+<script src="assets/boot.js?v=3"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<!-- ================= BOOT ================= -->
+<div class="boot" id="bootScreen">
+  <div class="spinner"></div>
+  <div>กำลังตรวจสอบสิทธิ์การเข้าใช้งาน…</div>
+</div>
+
+<!-- ================= AUTH ================= -->
+<div class="login-wrap hide" id="authScreen">
+  <div class="auth-card">
+    <div class="logo-plate">
+      <div class="mark">M</div><div class="wm">MASARU</div>
+    </div>
+    <div class="sub-brand">BRANDING PORTAL</div>
+    <div class="sub-desc">ศูนย์รวมระบบงานฝ่ายแบรนดิ้ง</div>
+
+    <!-- เข้าสู่ระบบ -->
+    <div id="paneSignin">
+      <div class="fld"><label>อีเมล</label>
+        <input type="email" id="inEmail" autocomplete="username" placeholder="name@masaru.co.th"></div>
+      <div class="fld"><label>รหัสผ่าน</label>
+        <input type="password" id="inPass" autocomplete="current-password" placeholder="••••••••"></div>
+      <button class="btn-primary" id="btnLogin"><i class="ti ti-login"></i> เข้าสู่ระบบ</button>
+      <div class="msg" id="msgIn"></div>
+      <div class="switch-line">ยังไม่มีบัญชี? <span class="link" id="toSignup">สมัครด้วยรหัสเชิญ</span></div>
+    </div>
+
+    <!-- สมัครสมาชิก -->
+    <div id="paneSignup" class="hide">
+      <div class="fld"><label>ชื่อ-นามสกุล</label><input type="text" id="upName" placeholder="ชื่อที่แสดงในระบบ"></div>
+      <div class="fld"><label>อีเมล</label><input type="email" id="upEmail" placeholder="name@masaru.co.th"></div>
+      <div class="fld"><label>รหัสผ่าน (อย่างน้อย 6 ตัว)</label><input type="password" id="upPass" placeholder="••••••••"></div>
+      <div class="fld"><label>ตำแหน่งงาน</label>
+        <select id="upRole"><option value="">— กำลังโหลด —</option></select>
+        <div class="hint" id="roleHint">ตำแหน่งเป็นตัวกำหนดว่าคุณเห็นระบบไหนได้บ้าง</div></div>
+      <div class="fld"><label>รหัสเชิญ</label><input type="text" id="upCode" placeholder="MASARU-BRAND"></div>
+      <button class="btn-primary btn-accent" id="btnSignup"><i class="ti ti-user-plus"></i> สมัครสมาชิก</button>
+      <div class="msg" id="msgUp"></div>
+      <div class="switch-line">มีบัญชีแล้ว? <span class="link" id="toSignin">เข้าสู่ระบบ</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= HUB ================= -->
+<div class="hide" id="hubScreen">
+  <header class="top">
+    <div class="wordmark"><div class="mark">M</div><b>MASARU</b></div>
+    <div class="hdr-label">ศูนย์รวมระบบฝ่ายแบรนดิ้ง</div>
+    <div class="spacer"></div>
+    <span class="role-pill" id="rolePill">—</span>
+    <button class="logout" id="btnOut"><i class="ti ti-logout"></i> ออกจากระบบ</button>
+  </header>
+
+  <main>
+    <div class="hub-title" id="hubGreet">สวัสดี</div>
+    <div class="hub-sub" id="hubSub">กำลังโหลดรายการระบบ…</div>
+
+    <div class="grid kpi-row" id="kpiRow" style="margin-bottom:30px"></div>
+
+    <div class="app-grid" id="appGrid"></div>
+
+    <div id="logCard" class="hide">
+      <div class="sect-title" style="margin-top:38px">การนำเข้าข้อมูลล่าสุด</div>
+      <div class="card"><div class="tbl-wrap"><table class="tbl">
+        <thead><tr><th>ไฟล์</th><th>แหล่งข้อมูล</th><th class="num">แถวที่เข้า</th><th>โดย</th><th>เวลา</th><th>สถานะ</th></tr></thead>
+        <tbody id="logBody"></tbody></table></div></div>
+    </div>
+
+    <footer>MASARU Powertools · <span class="tag">Branding Portal</span></footer>
+  </main>
+</div>
+
+<script src="assets/app.js?v=3"></script>
+<script>if(window.__boot && !window.__bootCheckLibs()) throw new Error("boot-halt");</script>
+<script>
+(function(){
+  'use strict';
+  if(!window.MB) return;
+  var $=function(id){ return document.getElementById(id); };
+  var ic=function(n){ return '<i class="ti '+MB.esc(n||'ti-apps')+'"></i>'; };
+
+  function screen(which){
+    if(window.__boot) window.__boot.ok();
+    ['bootScreen','authScreen','hubScreen'].forEach(function(id){
+      $(id).classList.toggle('hide', id !== which);
+    });
+  }
+  function say(box,msg,kind){
+    var e=$(box); e.textContent=msg||''; e.className='msg'+(kind?' '+kind:'');
+  }
+
+  /* ---------- ตำแหน่งสำหรับหน้าสมัคร ---------- */
+  var ROLE_FALLBACK=[
+    {code:'manager',name_th:'ผู้จัดการแบรนด์',description:'ดูรายงานทั้งหมด นำเข้าข้อมูล ตั้งเป้า'},
+    {code:'analyst',name_th:'นักวิเคราะห์ข้อมูล',description:'ดูรายงานและนำเข้าข้อมูล'},
+    {code:'creator',name_th:'ดูแลครีเอเตอร์ / KOL',description:'ดูแลครีเอเตอร์ อันดับ และ Blacklist'},
+    {code:'marketing',name_th:'การตลาด',description:'ดูรายงานยอดขาย สินค้า และครีเอเตอร์'},
+    {code:'sales',name_th:'ฝ่ายขาย / Sale Admin',description:'ดูยอดขายและสินค้าขายดี'},
+    {code:'viewer',name_th:'ดูอย่างเดียว',description:'ดูภาพรวมยอดขายเท่านั้น'}
+  ];
+  async function loadRoles(){
+    var rows=ROLE_FALLBACK;
+    try{
+      var r=await MB.sb.from('brand_roles').select('code,name_th,description,sort_order')
+              .eq('active',true).eq('signup_visible',true).order('sort_order');
+      if(!r.error && r.data && r.data.length) rows=r.data;
+    }catch(e){}
+    $('upRole').innerHTML='<option value="">— เลือกตำแหน่ง —</option>'+rows.map(function(x){
+      return '<option value="'+MB.esc(x.code)+'" data-d="'+MB.esc(x.description||'')+'">'+MB.esc(x.name_th)+'</option>';
+    }).join('');
+    $('upRole').onchange=function(){
+      var o=this.options[this.selectedIndex];
+      $('roleHint').textContent=(o&&o.dataset.d)?o.dataset.d:'ตำแหน่งเป็นตัวกำหนดว่าคุณเห็นระบบไหนได้บ้าง';
+    };
+  }
+
+  /* ---------- auth ---------- */
+  $('toSignup').onclick=function(){ say('msgIn',''); $('paneSignin').classList.add('hide');
+    $('paneSignup').classList.remove('hide'); loadRoles(); };
+  $('toSignin').onclick=function(){ say('msgUp',''); $('paneSignup').classList.add('hide');
+    $('paneSignin').classList.remove('hide'); };
+
+  $('btnLogin').onclick=doLogin;
+  $('inPass').onkeydown=function(e){ if(e.key==='Enter') doLogin(); };
+
+  async function doLogin(){
+    say('msgIn','');
+    var email=$('inEmail').value.trim(), pass=$('inPass').value;
+    if(!email||!pass){ say('msgIn','กรอกอีเมลและรหัสผ่าน','err'); return; }
+    $('btnLogin').disabled=true; say('msgIn','กำลังเข้าสู่ระบบ…');
+    var r=await MB.sb.auth.signInWithPassword({email:email,password:pass});
+    $('btnLogin').disabled=false;
+    if(r.error){ say('msgIn',r.error.message==='Invalid login credentials'?'อีเมลหรือรหัสผ่านไม่ถูกต้อง':r.error.message,'err'); return; }
+    boot();
+  }
+
+  $('btnSignup').onclick=async function(){
+    say('msgUp','');
+    var name=$('upName').value.trim(), email=$('upEmail').value.trim(),
+        pass=$('upPass').value, role=$('upRole').value, code=$('upCode').value.trim();
+    if(!name||!email||!pass){ say('msgUp','กรอกข้อมูลให้ครบ','err'); return; }
+    if(!role){ say('msgUp','เลือกตำแหน่งงานของคุณ','err'); return; }
+    if(code!==MB.CFG.inviteCode){ say('msgUp','รหัสเชิญไม่ถูกต้อง','err'); return; }
+    if(pass.length<6){ say('msgUp','รหัสผ่านต้องยาวอย่างน้อย 6 ตัว','err'); return; }
+    this.disabled=true; say('msgUp','กำลังสมัคร…');
+    var r=await MB.sb.auth.signUp({email:email,password:pass,options:{data:{full_name:name,role:role}}});
+    this.disabled=false;
+    if(r.error){ say('msgUp',r.error.message,'err'); return; }
+    if(r.data.session) boot();
+    else say('msgUp','สมัครสำเร็จ — กรุณายืนยันอีเมลแล้วเข้าสู่ระบบ','ok');
+  };
+
+  $('btnOut').onclick=MB.signOut;
+  // logout ที่แท็บใดก็ตาม → กลับหน้า login ทันที
+  if(MB.sb.auth.onAuthStateChange){
+    MB.sb.auth.onAuthStateChange(function(ev,s){ if(ev==='SIGNED_OUT'||!s) screen('authScreen'); });
+  }
+
+  /* ---------- hub ---------- */
+  function renderApps(){
+    var roots=MB.state.roots;
+    $('hubSub').textContent = roots.length
+      ? 'คุณเข้าใช้งานได้ '+roots.length+' ระบบ — แตะการ์ดเพื่อเปิด (หรือกด “แท็บใหม่” เพื่อเปิดพร้อมกันหลายระบบ)'
+      : 'ยังไม่มีระบบที่ตำแหน่งของคุณมีสิทธิ์เข้าใช้งาน';
+
+    if(!roots.length){
+      $('appGrid').innerHTML='<div class="empty-apps"><b>ตำแหน่งของคุณยังไม่ถูกกำหนดสิทธิ์</b><br>'+
+        'ติดต่อผู้ดูแลระบบให้เปิดสิทธิ์ที่ ตั้งค่า → ระบบ &amp; สิทธิ์</div>';
+      return;
+    }
+    $('appGrid').innerHTML = roots.map(function(r){
+      var kids=MB.state.childrenOf[r.code]||[];
+      var url=MB.linkOf(r);
+      return '<div class="app-tile'+(r.color==='c3'?' accent':'')+'" data-url="'+MB.esc(url)+'">'+
+        '<div class="app-icon">'+ic(r.icon)+'</div>'+
+        '<div class="app-name">'+MB.esc(r.name)+'</div>'+
+        '<div class="app-desc">'+MB.esc(r.description||'')+'</div>'+
+        (kids.length?'<div class="app-chips">'+kids.map(function(k){
+            return '<span class="chip">'+MB.esc(k.name)+'</span>'; }).join('')+'</div>':'')+
+        '<div class="app-go">เข้าใช้งาน '+ic('ti-arrow-right')+
+          '<span class="app-newtab" data-url="'+MB.esc(url)+'" title="เปิดในแท็บใหม่">'+
+          ic('ti-external-link')+' แท็บใหม่</span></div>'+
+      '</div>';
+    }).join('');
+
+    $('appGrid').querySelectorAll('.app-newtab').forEach(function(b){
+      b.onclick=function(e){ e.stopPropagation(); window.open(b.dataset.url,'_blank'); };
+    });
+    $('appGrid').querySelectorAll('.app-tile').forEach(function(t){
+      t.onclick=function(){ location.href=t.dataset.url; };
+    });
+  }
+
+  function kpi(cls,lb,vl,ft,bar){
+    return '<div class="kpi '+cls+'"><div class="lb">'+lb+'</div><div class="vl">'+vl+'</div>'+
+      (ft?'<div class="ft">'+ft+'</div>':'')+
+      (bar!=null?'<div class="progress"><i style="width:'+Math.min(100,bar).toFixed(0)+'%"></i></div>':'')+'</div>';
+  }
+
+  async function loadKpi(){
+    var seeSales=!!MB.rowForFile('dashboard.html'), seeCreator=!!MB.rowForFile('creators.html');
+    if(!seeSales&&!seeCreator){ $('kpiRow').classList.add('hide'); return; }
+    var r=MB.presetRange('mtd');
+    try{
+      var d=await MB.rpc('brand_hub_summary',{p_from:r[0],p_to:r[1]});
+      var k=d.kpi||{}, h='', ach=k.target>0?(k.gmv/k.target*100):0;
+      if(seeSales){
+        h+=kpi('navy','GMV เดือนนี้',MB.fmt.baht(k.gmv),MB.fmt.date(r[0])+' – '+MB.fmt.date(r[1]))+
+           kpi('gold','Achievement',k.target>0?MB.fmt.pct(ach):'—',
+               k.target>0?'เป้า '+MB.fmt.baht(k.target):'ยังไม่ตั้งเป้าเดือนนี้',k.target>0?ach:null)+
+           kpi('','Orders',MB.fmt.n(k.orders),'ยกเลิก '+MB.fmt.n(k.cancelled)+' ออเดอร์');
+      }
+      if(seeCreator){
+        h+=kpi('green','Creators',MB.fmt.n(d.creators),MB.fmt.n(d.skus)+' SKU มียอดขาย')+
+           kpi('red','Blacklist',MB.fmt.n(d.blacklist),'Cancel Rate > '+MB.CFG.cancelThreshold+'%');
+      }
+      $('kpiRow').innerHTML=h;
+    }catch(e){
+      $('kpiRow').innerHTML=kpi('red','ยังอ่านข้อมูลไม่ได้','—','ตรวจว่ารัน schema.sql / schema2.sql แล้ว');
+    }
+  }
+
+  async function loadLogs(){
+    if(!MB.rowForFile('import.html')) return;
+    $('logCard').classList.remove('hide');
+    var tb=$('logBody'); MB.tableLoading(tb,6);
+    try{
+      var r=await MB.sb.from('brand_import_logs').select('*').order('created_at',{ascending:false}).limit(6);
+      if(r.error) throw r.error;
+      var rows=r.data||[];
+      if(!rows.length){ MB.tableEmpty(tb,6,'ยังไม่มีประวัติการนำเข้า'); return; }
+      tb.innerHTML=rows.map(function(x){
+        return '<tr><td>'+MB.esc(x.file_name||'-')+'</td>'+
+          '<td><span class="pill mute">'+MB.esc(x.source||'-')+'</span></td>'+
+          '<td class="num">'+MB.fmt.n(x.rows_inserted)+'</td>'+
+          '<td>'+MB.esc(x.imported_by||'-')+'</td>'+
+          '<td>'+MB.fmt.dt(x.created_at)+'</td>'+
+          '<td><span class="pill '+(x.status==='SUCCESS'?'up':'down')+'">'+MB.esc(x.status)+'</span></td></tr>';
+      }).join('');
+    }catch(e){ MB.tableEmpty(tb,6,'อ่านประวัติไม่ได้'); }
+  }
+
+  /* ---------- boot ---------- */
+  async function boot(){
+    var s=await MB.sb.auth.getSession();
+    if(!s.data.session){ screen('authScreen'); loadRoles(); return; }
+    await MB.loadProfile(s.data.session.user);
+
+    if(MB.state.profile && MB.state.profile.active===false){
+      alert('บัญชีนี้ถูกปิดการใช้งาน กรุณาติดต่อผู้ดูแลระบบ');
+      await MB.signOut(); return;
+    }
+    var nm=(MB.state.profile&&MB.state.profile.full_name)||MB.state.user.email;
+    var hr=new Date().getHours();
+    $('hubGreet').textContent=(hr<12?'สวัสดีตอนเช้า':hr<17?'สวัสดีตอนบ่าย':'สวัสดีตอนเย็น')+' · '+nm;
+    $('rolePill').textContent='ตำแหน่ง: '+(MB.state.roleName||MB.state.role);
+    screen('hubScreen');
+    renderApps(); loadKpi(); loadLogs();
+    if(new URLSearchParams(location.search).get('next')) history.replaceState(null,'','index.html');
+  }
+
+  boot().catch(function(e){
+    console.error(e);
+    screen('authScreen'); loadRoles();
+    say('msgIn','เชื่อมต่อฐานข้อมูลไม่สำเร็จ: '+(e&&e.message?e.message:e),'err');
+  });
+})();
+</script>
+</body>
+</html>
