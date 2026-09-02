@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="assets/style.css?v=3">
-<script src="assets/boot.js?v=3"></script>
+<link rel="stylesheet" href="assets/style.css?v=8">
+<script src="assets/boot.js?v=8"></script>
 </head>
 <body>
 
@@ -16,20 +16,22 @@
   <aside class="sidebar" id="sidebar"></aside>
   <div class="main">
     <div class="topbar">
-      <button class="mobile-btn" id="mobileBtn"><i class="ti ti-menu-2"></i></button>
+      <button class="mobile-btn" id="mobileBtn" aria-label="เมนู">☰</button>
       <div><h1>ตั้งค่าระบบ</h1><div class="sub">เป้ายอดขาย · SKU Master · Blacklist · ผู้ใช้งาน</div></div>
       <div class="spacer"></div>
-      <div class="seg" id="segTab">
-        <button data-v="target" class="on">เป้ายอดขาย</button>
-        <button data-v="sku">SKU Master</button>
-        <button data-v="bl">Blacklist</button>
-        <button data-v="user">ผู้ใช้งาน</button>
-        <button data-v="perm">ระบบ &amp; สิทธิ์</button>
-        <button data-v="role">ตำแหน่ง</button>
-      </div>
+
     </div>
 
     <div class="content">
+
+      <div class="tabs" id="segTab">
+        <button data-v="target" class="on"><i class="ti ti-target"></i> เป้ายอดขาย</button>
+        <button data-v="sku"><i class="ti ti-tags"></i> SKU Master</button>
+        <button data-v="bl"><i class="ti ti-ban"></i> Blacklist</button>
+        <button data-v="user"><i class="ti ti-users"></i> ผู้ใช้งาน</button>
+        <button data-v="perm"><i class="ti ti-lock-access"></i> ระบบ &amp; สิทธิ์</button>
+        <button data-v="role"><i class="ti ti-id-badge-2"></i> ตำแหน่ง</button>
+      </div>
 
       <!-- ============ TARGETS ============ -->
       <section id="tabTarget">
@@ -204,7 +206,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="assets/app.js?v=3"></script>
+<script src="assets/app.js?v=8"></script>
 <script>if(window.__boot && !window.__bootCheckLibs()) throw new Error("boot-halt");</script>
 
 
