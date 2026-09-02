@@ -284,3 +284,152 @@ table.tbl tr:nth-child(3) .rank{background:#e6d3c0;color:#6b4a12}
   .content,main{padding:0}
   .card{break-inside:avoid;box-shadow:none}
 }
+
+/* =====================================================================
+   UX COMPONENTS — ใช้ร่วมกันได้ แต่แต่ละหน้าเลือกใช้เท่าที่เหมาะกับงาน
+   ===================================================================== */
+
+/* ---------- แถบเครื่องมือแบบชิป (แทนแถวตัวกรองยาว ๆ) ---------- */
+.toolbar{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px 14px;margin-bottom:18px;box-shadow:var(--shadow);
+}
+.toolbar-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.toolbar-row + .toolbar-row{margin-top:11px;padding-top:11px;border-top:1px dashed var(--line)}
+.toolbar .lbl{font-size:12.5px;color:var(--muted);font-weight:600;margin-right:2px}
+.toolbar .spacer{flex:1}
+
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip-btn{
+  border:1px solid var(--line);background:#fff;color:var(--muted);
+  padding:7px 14px;border-radius:99px;font-size:13px;font-weight:600;transition:.15s;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+}
+.chip-btn:hover{border-color:var(--green-line);background:var(--green-soft);color:var(--green-dark)}
+.chip-btn.on{background:var(--green);border-color:var(--green);color:#fff}
+.chip-btn.on.accent{background:var(--gold);border-color:var(--gold)}
+.chip-btn .cnt{font-size:11px;opacity:.7;font-weight:500}
+
+/* ช่องค้นหาแบบเด่น */
+.search-box{position:relative;flex:1;min-width:200px;max-width:420px}
+.search-box i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--faint);font-size:17px}
+.search-box input{
+  width:100%;padding:10px 12px 10px 38px;border:1px solid var(--line);border-radius:11px;
+  background:#fbfcfe;outline:none;transition:.15s;font-size:14px;
+}
+.search-box input:focus{border-color:var(--green);background:#fff;box-shadow:0 0 0 3px var(--green-soft)}
+
+/* ตัวกรองขั้นสูง (ซ่อนไว้ กดค่อยเปิด) */
+.adv-toggle{
+  border:0;background:transparent;color:var(--green);font-weight:700;font-size:13px;
+  display:inline-flex;align-items:center;gap:6px;padding:6px 4px;
+}
+.adv-toggle i{transition:transform .2s}
+.adv-toggle.open i{transform:rotate(180deg)}
+.adv-body{display:none}
+.adv-body.open{display:block}
+
+/* ---------- หัวหน้าเพจ (ใช้ในหน้าที่มีแถบข้าง) ---------- */
+.page-head{
+  display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:18px;
+}
+.page-head .ph-t{flex:1;min-width:220px}
+.page-head h2{margin:0;font-size:21px;font-weight:700;color:var(--green-dark);letter-spacing:-.3px}
+.page-head .ph-d{color:var(--muted);font-size:13.5px;margin-top:3px}
+.page-head .ph-a{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- KPI เด่น (ตัวเลขหลักใหญ่ + ตัวรองเล็ก) ---------- */
+.hero-kpi{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-bottom:14px}
+.hero-card{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px 22px;box-shadow:var(--shadow);position:relative;overflow:hidden;
+}
+.hero-card::after{content:'';position:absolute;right:-28px;top:-28px;width:110px;height:110px;
+  border-radius:50%;background:var(--green-soft);opacity:.55}
+.hero-card.accent::after{background:#fde9ea}
+.hero-card .hl{font-size:13px;color:var(--muted);font-weight:600;position:relative}
+.hero-card .hv{font-size:34px;font-weight:800;letter-spacing:-1.2px;color:var(--green-dark);
+  margin-top:2px;line-height:1.15;position:relative;font-variant-numeric:tabular-nums}
+.hero-card .hf{font-size:12.5px;color:var(--faint);margin-top:4px;position:relative}
+.hero-card .hicon{position:absolute;right:20px;top:18px;font-size:22px;color:var(--green);opacity:.5}
+
+/* วงแหวน Achievement */
+.ring-wrap{display:flex;align-items:center;gap:16px}
+.ring{width:78px;height:78px;flex:0 0 78px;position:relative}
+.ring svg{transform:rotate(-90deg)}
+.ring .rt{position:absolute;inset:0;display:grid;place-items:center;
+  font-size:16px;font-weight:800;color:var(--green-dark)}
+
+/* KPI แถวเล็ก */
+.mini-row{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:18px}
+.mini{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+.mini .ml{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.mini .mv{font-size:19px;font-weight:800;color:var(--green-dark);margin-top:2px;font-variant-numeric:tabular-nums}
+.mini .mf{font-size:11.5px;color:var(--faint)}
+
+/* ---------- แท็บในหน้า ---------- */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin-bottom:20px;overflow-x:auto}
+.tabs button{
+  border:0;background:transparent;padding:11px 17px;font-size:14.5px;font-weight:600;
+  color:var(--muted);border-bottom:3px solid transparent;white-space:nowrap;transition:.15s;
+}
+.tabs button:hover{color:var(--green-dark)}
+.tabs button.on{color:var(--green-dark);border-bottom-color:var(--gold);font-weight:700}
+.tabs button .badge{
+  display:inline-block;margin-left:6px;background:var(--gold);color:#fff;
+  font-size:11px;font-weight:700;padding:1px 7px;border-radius:99px;
+}
+
+/* ---------- Drawer (ลิ้นชักด้านขวา) ---------- */
+.drawer-bg{position:fixed;inset:0;background:rgba(10,20,40,.5);z-index:220;opacity:0;
+  pointer-events:none;transition:.2s}
+.drawer-bg.show{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;top:0;right:0;bottom:0;width:min(460px,92vw);background:#fff;z-index:221;
+  box-shadow:-10px 0 40px rgba(10,20,40,.22);transform:translateX(100%);transition:.25s cubic-bezier(.22,1,.36,1);
+  display:flex;flex-direction:column;
+}
+.drawer.show{transform:translateX(0)}
+.drawer .dh{padding:17px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+.drawer .dh h3{margin:0;font-size:17px;flex:1;color:var(--green-dark)}
+.drawer .dh .x{border:0;background:var(--line-soft);width:32px;height:32px;border-radius:9px;font-size:18px;color:var(--muted)}
+.drawer .dh .x:hover{background:#fbe6e8;color:var(--gold)}
+.drawer .db{padding:18px 20px;overflow:auto;flex:1}
+
+/* ---------- Stepper (หน้านำเข้าข้อมูล) ---------- */
+.stepper{display:flex;gap:0;margin-bottom:20px;overflow-x:auto;padding-bottom:2px}
+.step{display:flex;align-items:center;gap:10px;padding:0 18px 0 0;white-space:nowrap}
+.step .sn{
+  width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;
+  font-weight:800;font-size:13.5px;background:var(--line-soft);color:var(--faint);transition:.2s;
+}
+.step .st{font-size:13.5px;color:var(--faint);font-weight:600}
+.step.done .sn{background:var(--ok-soft);color:var(--green-ok)}
+.step.done .st{color:var(--muted)}
+.step.active .sn{background:var(--green);color:#fff;box-shadow:0 0 0 4px var(--green-soft)}
+.step.active .st{color:var(--green-dark);font-weight:700}
+.step::after{content:'';width:34px;height:2px;background:var(--line);margin-left:8px}
+.step:last-child::after{display:none}
+
+/* ---------- สถานะว่าง แบบมีคำแนะนำ ---------- */
+.empty-guide{text-align:center;padding:40px 22px;color:var(--muted)}
+.empty-guide .eg-ic{font-size:40px;color:var(--green-line);margin-bottom:10px}
+.empty-guide b{display:block;font-size:15px;color:var(--green-dark);margin-bottom:5px}
+.empty-guide span{font-size:13.5px;display:block;max-width:420px;margin:0 auto 14px}
+
+/* ---------- ตาราง -> การ์ด บนมือถือ ---------- */
+@media(max-width:720px){
+  table.tbl.stack thead{display:none}
+  table.tbl.stack tbody tr{
+    display:block;border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;background:#fff;
+  }
+  table.tbl.stack tbody td{
+    display:flex;justify-content:space-between;gap:12px;border:0;padding:4px 0;text-align:right;
+  }
+  table.tbl.stack tbody td::before{
+    content:attr(data-l);color:var(--muted);font-size:12.5px;font-weight:600;text-align:left;
+  }
+  table.tbl.stack tbody td.num{text-align:right}
+  .page-head h2{font-size:18px}
+  .hero-card .hv{font-size:28px}
+}
