@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="assets/style.css?v=3">
-<script src="assets/boot.js?v=3"></script>
+<link rel="stylesheet" href="assets/style.css?v=8">
+<script src="assets/boot.js?v=8"></script>
 </head>
 <body>
 
@@ -16,7 +16,7 @@
   <aside class="sidebar" id="sidebar"></aside>
   <div class="main">
     <div class="topbar">
-      <button class="mobile-btn" id="mobileBtn"><i class="ti ti-menu-2"></i></button>
+      <button class="mobile-btn" id="mobileBtn" aria-label="เมนู">☰</button>
       <div><h1>นำเข้าข้อมูล</h1><div class="sub">รองรับ .xlsx .xls .csv — ไฟล์จาก JST, TikTok Shop, Lazada, Creator และ Ads</div></div>
       <div class="spacer"></div>
       <button class="btn ghost sm" id="btnFill">เติมแบรนด์จาก SKU Master</button>
@@ -24,6 +24,13 @@
     </div>
 
     <div class="content">
+      <div class="stepper" id="stepper">
+        <div class="step active" data-s="1"><div class="sn">1</div><div class="st">เลือกประเภทไฟล์</div></div>
+        <div class="step" data-s="2"><div class="sn">2</div><div class="st">เลือกไฟล์</div></div>
+        <div class="step" data-s="3"><div class="sn">3</div><div class="st">จับคู่คอลัมน์</div></div>
+        <div class="step" data-s="4"><div class="sn">4</div><div class="st">ตรวจและบันทึก</div></div>
+      </div>
+
       <!-- STEP 1 -->
       <div class="card" style="margin-bottom:16px">
         <div class="hd"><h3>1 · เลือกประเภทไฟล์</h3></div>
@@ -38,7 +45,7 @@
           <span id="srcLabel" class="pill mute">ยังไม่เลือกประเภท</span></div>
         <div class="bd">
           <div class="dropzone" id="dz">
-            <div class="ic">⤓</div>
+            <div class="ic"><i class="ti ti-cloud-upload"></i></div>
             <b>ลากไฟล์มาวาง หรือคลิกเพื่อเลือก</b>
             <span>รองรับ .xlsx .xls .csv (ไฟล์ใหญ่ควรไม่เกิน ~50,000 แถวต่อครั้ง)</span>
           </div>
@@ -62,7 +69,7 @@
       <div class="card" id="cardPrev" style="display:none">
         <div class="hd"><h3>4 · ตรวจสอบและบันทึก</h3><div class="spacer"></div>
           <span id="prevStat" style="font-size:12.5px;color:var(--muted)"></span>
-          <button class="btn gold" id="btnImport">บันทึกเข้าฐานข้อมูล</button></div>
+          <button class="btn gold" id="btnImport"><i class="ti ti-database-import"></i> บันทึกเข้าฐานข้อมูล</button></div>
         <div id="progBox" style="display:none;padding:0 16px 12px">
           <div class="progress" style="height:9px"><i id="progBar" style="width:0%"></i></div>
           <div style="font-size:12px;color:var(--muted);margin-top:5px" id="progTxt"></div>
@@ -88,7 +95,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-<script src="assets/app.js?v=3"></script>
+<script src="assets/app.js?v=8"></script>
 <script>if(window.__boot && !window.__bootCheckLibs()) throw new Error("boot-halt");</script>
 
 
@@ -229,6 +236,15 @@
 
   var srcKey=null, headers=[], rawRows=[], mapping={}, fileName='';
 
+  /* ไฮไลต์ขั้นตอนที่กำลังทำ + ติ๊กขั้นที่ผ่านแล้ว */
+  function setStep(n){
+    $('stepper').querySelectorAll('.step').forEach(function(el){
+      var i=parseInt(el.dataset.s,10);
+      el.classList.toggle('done', i<n);
+      el.classList.toggle('active', i===n);
+    });
+  }
+
   /* ================= HELPERS ================= */
   function norm(s){ return String(s==null?'':s).toLowerCase().replace(/[\s_\-\.\(\)\[\]\/]/g,'').trim(); }
 
@@ -316,9 +332,10 @@
         srcKey=el.dataset.k;
         $('srcGrid').querySelectorAll('[data-k]').forEach(function(x){
           x.style.borderColor='var(--line)'; x.style.background='#fff'; });
-        el.style.borderColor='var(--blue)'; el.style.background='var(--blue-soft)';
+        el.style.borderColor='var(--green)'; el.style.background='var(--green-soft)';
         $('srcLabel').textContent=SOURCES[srcKey].label;
         $('srcLabel').className='pill vdo';
+        setStep(rawRows.length?3:2);
         if(rawRows.length) buildMapping();
       });
     });
@@ -348,7 +365,7 @@
         });
         $('fileInfo').innerHTML='<div class="insight good"><div class="ic">📄</div><div>'+
           '<b>'+MB.esc(fileName)+'</b><span>'+MB.fmt.n(rawRows.length)+' แถว · '+headers.length+' คอลัมน์ (header อยู่แถวที่ '+(hi+1)+')</span></div></div>';
-        if(!srcKey){ MB.toast('เลือกประเภทไฟล์ในขั้นตอนที่ 1 ก่อน','err'); return; }
+        if(!srcKey){ MB.toast('เลือกประเภทไฟล์ในขั้นตอนที่ 1 ก่อน','err'); setStep(1); return; }
         buildMapping();
       }catch(err){
         $('fileInfo').innerHTML='<div class="insight bad"><div class="ic">⚠️</div><div><b>อ่านไฟล์ไม่สำเร็จ</b><span>'+MB.esc(err.message||err)+'</span></div></div>';
@@ -363,6 +380,7 @@
     mapping={};
     s.fields.forEach(function(f){ mapping[f.key]=guessCol(f); });
     renderMapping();
+    setStep(3);
     renderPreview();
   }
 
@@ -457,6 +475,7 @@
     }
     var t=transform();
     window.__payload=t.rows;
+    setStep(4);
     $('btnImport').disabled = !t.rows.length;
     $('prevStat').textContent = 'พร้อมบันทึก '+MB.fmt.n(t.rows.length)+' แถว'+
       (t.skipped?' · ข้าม '+MB.fmt.n(t.skipped)+' แถว (ข้อมูลจำเป็นว่าง)':'')+
