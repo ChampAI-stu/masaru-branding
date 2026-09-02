@@ -7,8 +7,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.11.0/dist/tabler-icons.min.css">
-<link rel="stylesheet" href="assets/style.css?v=3">
-<script src="assets/boot.js?v=3"></script>
+<link rel="stylesheet" href="assets/style.css?v=8">
+<script src="assets/boot.js?v=8"></script>
 </head>
 <body>
 
@@ -16,7 +16,7 @@
   <aside class="sidebar" id="sidebar"></aside>
   <div class="main">
     <div class="topbar">
-      <button class="mobile-btn" id="mobileBtn"><i class="ti ti-menu-2"></i></button>
+      <button class="mobile-btn" id="mobileBtn" aria-label="เมนู">☰</button>
       <div><h1>ครีเอเตอร์ &amp; Blacklist</h1><div class="sub" id="rangeLabel">—</div></div>
       <div class="spacer"></div>
       <button class="btn ghost sm" id="btnCsv">ดาวน์โหลด CSV</button>
@@ -24,37 +24,47 @@
     </div>
 
     <div class="content">
-      <div class="filters">
-        <div class="field"><label>ตั้งแต่วันที่</label><input type="date" id="dFrom"></div>
-        <div class="field"><label>ถึงวันที่</label><input type="date" id="dTo"></div>
-        <div class="field"><label>ช่วงสำเร็จรูป</label>
-          <select id="selPreset">
-            <option value="">— กำหนดเอง —</option>
-            <option value="7d">7 วันล่าสุด</option>
-            <option value="30d" selected>30 วันล่าสุด</option>
-            <option value="mtd">เดือนนี้</option>
-            <option value="lastm">เดือนก่อน</option>
-            <option value="ytd">ตั้งแต่ต้นปี</option>
-          </select>
-        </div>
-        <div class="field"><label>ประเภทคอนเทนต์</label>
-          <div class="seg" id="segType">
-            <button data-v="ALL" class="on">ทั้งหมด</button>
-            <button data-v="VDO">VDO</button>
-            <button data-v="LIVE">LIVE</button>
+      <div class="toolbar">
+        <div class="toolbar-row">
+          <div class="search-box">
+            <i class="ti ti-search"></i>
+            <input type="search" id="qName" placeholder="ค้นหาชื่อครีเอเตอร์…">
           </div>
-        </div>
-        <div class="field"><label>จำนวนอันดับ</label>
-          <div class="seg" id="segTop">
-            <button data-v="10" class="on">10</button>
-            <button data-v="20">20</button>
-            <button data-v="50">50</button>
+          <div class="spacer"></div>
+          <div class="chips" id="chipType">
+            <button class="chip-btn on" data-v="ALL">ทั้งหมด</button>
+            <button class="chip-btn" data-v="VDO"><i class="ti ti-video"></i> VDO</button>
+            <button class="chip-btn" data-v="LIVE"><i class="ti ti-broadcast"></i> LIVE</button>
           </div>
+          <div class="chips" id="chipTop">
+            <button class="chip-btn on" data-v="10">Top 10</button>
+            <button class="chip-btn" data-v="20">Top 20</button>
+            <button class="chip-btn" data-v="50">Top 50</button>
+          </div>
+          <button class="adv-toggle" id="advBtn"><i class="ti ti-chevron-down"></i> ช่วงเวลา</button>
         </div>
-        <div class="field"><label>ค้นหา</label><input type="search" id="qName" placeholder="ชื่อครีเอเตอร์"></div>
-        <button class="btn" id="btnApply">ดูข้อมูล</button>
+        <div class="toolbar-row adv-body" id="advBody">
+          <div class="field"><label>ตั้งแต่วันที่</label><input type="date" id="dFrom"></div>
+          <div class="field"><label>ถึงวันที่</label><input type="date" id="dTo"></div>
+          <div class="field"><label>ช่วงสำเร็จรูป</label>
+            <select id="selPreset">
+              <option value="7d">7 วันล่าสุด</option>
+              <option value="30d" selected>30 วันล่าสุด</option>
+              <option value="mtd">เดือนนี้</option>
+              <option value="lastm">เดือนก่อน</option>
+              <option value="ytd">ตั้งแต่ต้นปี</option>
+            </select></div>
+          <button class="btn" id="btnApply"><i class="ti ti-search"></i> ดูข้อมูลตามนี้</button>
+        </div>
       </div>
 
+      <!-- แยกเป็น 2 แท็บ ไม่ต้องเลื่อนยาว -->
+      <div class="tabs" id="tabBar">
+        <button class="on" data-t="rank"><i class="ti ti-trophy"></i> อันดับครีเอเตอร์</button>
+        <button data-t="bl"><i class="ti ti-ban"></i> Blacklist <span class="badge hide" id="blBadge">0</span></button>
+      </div>
+
+<section id="paneRank">
       <div class="grid kpi-row" id="kpiRow" style="margin-bottom:16px"></div>
 
       <div class="grid" style="grid-template-columns:minmax(0,1fr) minmax(0,1fr);margin-bottom:16px" id="rowCharts">
@@ -85,9 +95,12 @@
         </div>
       </div>
 
+      </section>
+
+      <section id="paneBl" class="hide">
       <div class="card">
         <div class="hd">
-          <h3>⛔ Blacklist · Cancel Rate เกิน <span id="thLbl">70</span>%</h3>
+          <h3>Cancel Rate เกิน <span id="thLbl">70</span>% — ควรพิจารณา</h3>
           <div class="spacer"></div>
           <div class="field" style="margin:0"><label>เกณฑ์ (%)</label><input type="number" id="inTh" value="70" min="1" max="100" style="min-width:82px"></div>
           <div class="field" style="margin:0"><label>ออเดอร์ขั้นต่ำ</label><input type="number" id="inMin" value="5" min="1" style="min-width:82px"></div>
@@ -103,7 +116,7 @@
             <tbody id="tbRisk"></tbody>
           </table>
         </div>
-        <div class="hd" style="border-top:1px solid var(--line-2);border-bottom:0">
+        <div class="hd" style="border-top:1px solid var(--line-soft);border-bottom:0">
           <h3 style="font-size:13.5px">รายชื่อที่อยู่ใน Blacklist แล้ว</h3></div>
         <div class="tbl-wrap">
           <table class="tbl">
@@ -112,21 +125,21 @@
           </table>
         </div>
       </div>
+      </section>
     </div>
   </div>
 </div>
 
-<!-- SKU MODAL -->
-<div class="modal-bg" id="mSku">
-  <div class="modal" style="max-width:640px">
-    <div class="hd"><h3 id="mSkuTitle">Top 5 SKU</h3><button class="x" id="mSkuX">×</button></div>
-    <div class="bd" id="mSkuBody"></div>
-  </div>
+<!-- SKU DRAWER -->
+<div class="drawer-bg" id="dwBg"></div>
+<div class="drawer" id="dw">
+  <div class="dh"><h3 id="mSkuTitle">Top 5 SKU</h3><button class="x" id="mSkuX">×</button></div>
+  <div class="db" id="mSkuBody"></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="assets/app.js?v=3"></script>
+<script src="assets/app.js?v=8"></script>
 <script>if(window.__boot && !window.__bootCheckLibs()) throw new Error("boot-halt");</script>
 
 
@@ -135,6 +148,17 @@
   'use strict';
   var $=function(id){return document.getElementById(id);};
   var topN=10, ctype='ALL', charts={}, rankRows=[], riskRows=[];
+  function bindChips(id,cb){
+    $(id).addEventListener('click',function(e){
+      var b=e.target.closest('button[data-v]'); if(!b) return;
+      this.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on'); cb(b.dataset.v);
+    });
+  }
+  function openDrawer(on){
+    $('dw').classList.toggle('show',!!on);
+    $('dwBg').classList.toggle('show',!!on);
+  }
 
   function range(){ return [$('dFrom').value,$('dTo').value]; }
 
@@ -166,9 +190,9 @@
         '<td class="num"><b>'+MB.fmt.baht(x.gmv)+'</b></td>'+
         '<td class="num">'+MB.fmt.short(v)+'</td>'+
         '<td class="num">'+MB.fmt.short(l)+'</td>'+
-        '<td><div style="display:flex;height:6px;border-radius:99px;overflow:hidden;background:var(--line-2)">'+
-            '<i style="width:'+vp.toFixed(0)+'%;background:var(--blue)"></i>'+
-            '<i style="flex:1;background:var(--red)"></i></div>'+
+        '<td><div style="display:flex;height:6px;border-radius:99px;overflow:hidden;background:var(--line-soft)">'+
+            '<i style="width:'+vp.toFixed(0)+'%;background:#2E75B6"></i>'+
+            '<i style="flex:1;background:#d62030"></i></div>'+
             '<div style="font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap">VDO '+Math.round(vp)+'% · LIVE '+(100-Math.round(vp))+'%</div></td>'+
         '<td class="num">'+MB.fmt.n(x.orders)+'</td>'+
         '<td class="num">'+MB.fmt.n(x.items_sold)+'</td>'+
@@ -238,7 +262,7 @@
     var r=range();
     $('mSkuTitle').textContent='Top 5 SKU · '+name;
     $('mSkuBody').innerHTML='<div class="empty"><span class="spinner"></span></div>';
-    MB.modal('mSku',true);
+    openDrawer(true);
     try{
       var rows=await MB.rpc('brand_creator_top_skus',{p_creator:name,p_from:r[0],p_to:r[1],p_limit:5});
       if(!rows||!rows.length){
@@ -247,17 +271,26 @@
         return;
       }
       var max=Math.max.apply(null,rows.map(function(x){return Number(x.gmv)||0;}))||1;
-      var h='<table class="tbl"><thead><tr><th style="width:36px">#</th><th>SKU</th><th>แบรนด์</th>'+
-            '<th class="num">จำนวน</th><th class="num">GMV</th><th style="width:90px"></th></tr></thead><tbody>';
-      rows.forEach(function(x,i){
-        h+='<tr><td><div class="rank">'+(i+1)+'</div></td>'+
-           '<td><b>'+MB.esc(x.sku)+'</b><div style="font-size:11.5px;color:var(--muted)">'+MB.esc(x.product_name||'')+'</div></td>'+
-           '<td><span class="pill mute">'+MB.esc(x.brand||'-')+'</span></td>'+
-           '<td class="num">'+MB.fmt.n(x.qty)+'</td>'+
-           '<td class="num"><b>'+MB.fmt.baht(x.gmv)+'</b></td>'+
-           '<td><div class="bar-mini"><i style="width:'+((Number(x.gmv)||0)/max*100).toFixed(0)+'%"></i></div></td></tr>';
+      // ในลิ้นชักแคบ ใช้รายการแบบการ์ด อ่านง่ายกว่าตาราง
+      var h='';
+      rows.forEach(function(x,idx){
+        var p=(Number(x.gmv)||0)/max*100;
+        h+='<div style="display:flex;gap:12px;padding:13px 0;'+(idx?'border-top:1px solid var(--line-soft)':'')+'">'+
+             '<div class="rank" style="width:26px;height:26px;flex:0 0 26px">'+(idx+1)+'</div>'+
+             '<div style="flex:1;min-width:0">'+
+               '<div style="font-weight:700;font-size:14px;color:var(--green-dark)">'+MB.esc(x.sku)+'</div>'+
+               '<div style="font-size:12.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+
+                 MB.esc(x.product_name||'-')+'</div>'+
+               '<div style="display:flex;align-items:center;gap:8px;margin-top:6px">'+
+                 '<span class="pill mute">'+MB.esc(x.brand||'-')+'</span>'+
+                 '<span style="font-size:12.5px;color:var(--muted)">'+MB.fmt.n(x.qty)+' ชิ้น</span>'+
+               '</div>'+
+               '<div class="bar-mini" style="margin-top:7px"><i style="width:'+p.toFixed(0)+'%"></i></div>'+
+             '</div>'+
+             '<div style="text-align:right;font-weight:800;font-size:14.5px;color:var(--green-dark);white-space:nowrap">'+
+               MB.fmt.baht(x.gmv)+'</div>'+
+           '</div>';
       });
-      h+='</tbody></table>';
       $('mSkuBody').innerHTML=h;
     }catch(e){ $('mSkuBody').innerHTML='<div class="empty">'+MB.esc(e.message||e)+'</div>'; }
   }
@@ -270,7 +303,16 @@
     try{
       riskRows = await MB.rpc('brand_creator_risk',
         {p_from:r[0],p_to:r[1],p_threshold:th,p_min_orders:mn}) || [];
-      if(!riskRows.length){ MB.tableEmpty(tb,7,'✅ ไม่พบครีเอเตอร์ที่ Cancel Rate เกินเกณฑ์'); return; }
+      var bd=$('blBadge');
+      bd.textContent=riskRows.length;
+      bd.classList.toggle('hide', riskRows.length===0);
+      if(!riskRows.length){
+        tb.innerHTML='<tr><td colspan="7"><div class="empty-guide">'+
+          '<div class="eg-ic"><i class="ti ti-shield-check"></i></div>'+
+          '<b>ไม่มีครีเอเตอร์ที่ต้องกังวล</b>'+
+          '<span>ไม่พบใครที่ Cancel Rate เกินเกณฑ์ในช่วงเวลานี้</span></div></td></tr>';
+        return;
+      }
       tb.innerHTML=riskRows.map(function(x){
         return '<tr><td><b>'+MB.esc(x.creator_name)+'</b></td>'+
           '<td class="num">'+MB.fmt.n(x.orders)+'</td>'+
@@ -353,10 +395,23 @@
     $('btnReload').addEventListener('click',refresh);
     $('btnScan').addEventListener('click',loadRisk);
     $('qName').addEventListener('input',paintRank);
-    MB.segment($('segTop'),function(v){ topN=parseInt(v,10); loadRank(); });
-    MB.segment($('segType'),function(v){ ctype=v; loadRank(); });
-    $('mSkuX').addEventListener('click',function(){ MB.modal('mSku',false); });
-    $('mSku').addEventListener('click',function(e){ if(e.target===this) MB.modal('mSku',false); });
+    bindChips('chipTop',function(v){ topN=parseInt(v,10); loadRank(); });
+    bindChips('chipType',function(v){ ctype=v; loadRank(); });
+    $('mSkuX').addEventListener('click',function(){ openDrawer(false); });
+    $('dwBg').addEventListener('click',function(){ openDrawer(false); });
+    document.addEventListener('keydown',function(e){ if(e.key==='Escape') openDrawer(false); });
+
+    // แท็บ
+    $('tabBar').addEventListener('click',function(e){
+      var b=e.target.closest('button[data-t]'); if(!b) return;
+      this.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});
+      b.classList.add('on');
+      $('paneRank').classList.toggle('hide', b.dataset.t!=='rank');
+      $('paneBl').classList.toggle('hide',   b.dataset.t!=='bl');
+    });
+    $('advBtn').addEventListener('click',function(){
+      this.classList.toggle('open'); $('advBody').classList.toggle('open');
+    });
 
     $('btnAddAll').addEventListener('click',async function(){
       var pend=riskRows.filter(function(x){return !x.already_listed;});
