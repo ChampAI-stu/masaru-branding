@@ -55,7 +55,10 @@
   const CFG = {
     url: 'https://espxzszehvtcbiudwfit.supabase.co',
     key: 'sb_publishable_0I3vRvYoFE_8Fi6x_X2-CA_iGhN_JO7',
-    inviteCode: 'MASARU-BRAND',
+    version: 'v5',
+    // รับได้หลายรหัส (กันกรณีเบราว์เซอร์ยังใช้ไฟล์เก่า / คนจำรหัสเดิม)
+    inviteCode: 'MASARU-BRAND-2569',
+    inviteCodes: ['MASARU-BRAND-2569', 'MASARU-BRAND'],
     brands: ['MASARU', 'KOSEN', 'FROGGER', 'TAITITECH', 'IKOMAX'],
     platforms: ['TIKTOK', 'LAZADA'],
     cancelThreshold: 70
@@ -95,9 +98,30 @@
       description:'เป้ายอดขาย SKU Master Blacklist ผู้ใช้ และการมองเห็นระบบ' }
   ];
 
+  /* ---------------- 1b) INVITE CODE ---------------- */
+  // ตัดช่องว่าง/ขีด/ตัวพิมพ์ใหญ่-เล็กออกก่อนเทียบ กัน copy-paste เพี้ยน
+  function normCode(s) {
+    return String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+  function checkInvite(input) {
+    const want = (CFG.inviteCodes && CFG.inviteCodes.length)
+      ? CFG.inviteCodes : [CFG.inviteCode];
+    const got = normCode(input);
+    for (let i = 0; i < want.length; i++) {
+      if (normCode(want[i]) === got) return true;
+    }
+    return false;
+  }
+  // ข้อความช่วยดีบัก: ไฟล์ app.js ที่เบราว์เซอร์โหลดอยู่ รับรหัสอะไรบ้าง
+  function inviteHint() {
+    const want = (CFG.inviteCodes && CFG.inviteCodes.length)
+      ? CFG.inviteCodes : [CFG.inviteCode];
+    return 'ไฟล์ที่เบราว์เซอร์โหลดอยู่ (' + CFG.version + ') รับรหัส: ' + want.join(' หรือ ');
+  }
+
   /* ---------------- 2) ROLE LEVELS ---------------- */
   // ระดับสิทธิ์: 1 = ดูอย่างเดียว, 2 = ทำงานได้, 3 = ผู้ดูแล
-  const ROLE_RANK = { viewer: 1, manager: 2, admin: 3 };
+  const ROLE_RANK = { viewer: 1, branding: 2, manager: 2, analyst: 2, creator: 2, admin: 3 };
 
   /* ---------------- 3) FORMATTERS ---------------- */
   const nf0 = new Intl.NumberFormat('th-TH', { maximumFractionDigits: 0 });
@@ -451,6 +475,7 @@
     pageAll: pageAll, rpc: rpc, chunkUpsert: chunkUpsert,
     loadProfile: loadProfile, guard: guard, can: can, signOut: signOut,
     linkOf: linkOf, currentFile: currentFile, rowForFile: rowForFile,
+    checkInvite: checkInvite, inviteHint: inviteHint, normCode: normCode,
     renderShell: renderShell, toast: toast, segment: segment, modal: modal,
     tableEmpty: tableEmpty, tableLoading: tableLoading, csv: csv,
     chartDefaults: chartDefaults
