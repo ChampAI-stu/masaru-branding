@@ -13,7 +13,6 @@
   --radius:16px; --radius-sm:11px;
   --shadow:0 1px 2px rgba(16,60,45,.05),0 8px 28px rgba(16,60,45,.07);
   --shadow-lg:0 20px 60px rgba(10,60,45,.28);
-  --sidebar-w:246px;
 }
 
 *{box-sizing:border-box;margin:0;padding:0}
@@ -119,41 +118,17 @@ main.wide{max-width:1560px}
 footer{text-align:center;color:var(--faint);font-size:.85rem;margin-top:44px}
 footer .tag{color:var(--green-dark);font-weight:600}
 
-/* ================= SHELL (หน้าย่อยที่มีแถบข้าง) ================= */
-.shell{display:flex;min-height:100vh}
-.sidebar{
-  width:var(--sidebar-w);flex:0 0 var(--sidebar-w);
-  background:linear-gradient(180deg,var(--green) 0%,var(--green-deep) 100%);
-  color:#fff;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;
-}
-.sidebar .brand{padding:18px 18px 15px;display:flex;align-items:center;gap:11px;border-bottom:1px solid rgba(255,255,255,.1)}
-.sidebar .brand .logo{width:36px;height:36px;border-radius:9px;flex:0 0 36px;background:var(--gold);
-  color:#fff;display:grid;place-items:center;font-weight:800;font-size:16px}
-.sidebar .brand b{display:block;font-size:14.5px;line-height:1.3}
-.sidebar .brand span{display:block;font-size:11px;color:rgba(255,255,255,.55);letter-spacing:.8px;text-transform:uppercase}
-.nav{padding:12px 10px;flex:1;overflow-y:auto}
-.nav .grp{font-size:10.5px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.4);padding:14px 10px 6px}
-.nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;margin-bottom:2px;
-  color:rgba(255,255,255,.8);font-size:14px;transition:.15s}
-.nav a:hover{background:rgba(255,255,255,.09);color:#fff}
-.nav a.active{background:rgba(214,32,48,.22);color:#fff;font-weight:700;box-shadow:inset 3px 0 0 var(--gold)}
-.nav a.back{color:rgba(255,255,255,.62);font-size:13px;border:1px dashed rgba(255,255,255,.2);margin-bottom:6px}
-.nav a.back:hover{border-color:rgba(255,255,255,.45)}
-.nav a .ic{width:19px;text-align:center;font-size:17px;opacity:.95;flex:0 0 19px}
-.sidebar .foot{padding:13px 15px;border-top:1px solid rgba(255,255,255,.1);font-size:12px}
-.sidebar .foot .who{color:#fff;font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.sidebar .foot .role{color:rgba(255,255,255,.5);font-size:11.5px}
-.sidebar .foot button{margin-top:9px;width:100%;background:rgba(255,255,255,.11);border:0;color:#fff;
-  padding:8px;border-radius:9px;font-size:12.5px}
-.sidebar .foot button:hover{background:var(--gold)}
+/* ================= หน้าทำงาน (ไม่มีแถบข้าง) ================= */
+header.top .wordmark{cursor:pointer}
+header.top .wordmark:hover b{color:#fff}
 
-.main{flex:1;min-width:0;display:flex;flex-direction:column}
-.topbar{background:var(--card);border-bottom:1px solid var(--line);padding:13px 24px;
+.main{display:flex;flex-direction:column;min-width:0}
+.topbar{background:var(--card);border-bottom:1px solid var(--line);padding:14px 26px;
   display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:30}
-.topbar h1{margin:0;font-size:18px;font-weight:700;color:var(--green-dark);letter-spacing:-.2px}
+.topbar h1{margin:0;font-size:19px;font-weight:700;color:var(--green-dark);letter-spacing:-.2px}
 .topbar .sub{color:var(--muted);font-size:13px}
 .topbar .spacer{flex:1}
-.content{padding:22px 24px 44px;max-width:1560px;width:100%}
+.content{padding:24px 26px 50px;max-width:1560px;width:100%;margin:0 auto}
 
 /* ================= FILTERS / BUTTONS ================= */
 .filters{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
@@ -265,22 +240,22 @@ table.tbl tr:nth-child(3) .rank{background:#e6d3c0;color:#6b4a12}
 .dropzone b{display:block;font-size:14.5px}
 .dropzone span{font-size:13px;color:var(--muted)}
 
-.mobile-btn{display:none;border:0;background:transparent;font-size:21px;color:var(--green-dark)}
 
 @media(max-width:980px){
-  .sidebar{position:fixed;z-index:100;left:-100%;transition:.25s;box-shadow:var(--shadow-lg)}
-  .sidebar.open{left:0}
-  .mobile-btn{display:block}
   .content{padding:16px 14px 34px}
   .topbar{padding:11px 14px}
+  header.top{padding:12px 14px;gap:10px}
+  header.top .hdr-label{display:none}
 }
 @media(max-width:560px){
   header.top .hdr-label{display:none}
+  header.top .role-pill{display:none}   /* จอเล็ก: ตัดชื่อ/ตำแหน่งออก ให้เหลือปุ่มที่จำเป็น */
+  header.top .hdr-btn,header.top .logout{padding:7px 11px;font-size:12.5px}
   .auth-card{padding:26px 22px}
   main{padding:24px 16px 44px}
 }
 @media print{
-  .sidebar,.topbar,.filters,.btn,header.top{display:none!important}
+  .topbar,.filters,.btn,header.top{display:none!important}
   .content,main{padding:0}
   .card{break-inside:avoid;box-shadow:none}
 }
