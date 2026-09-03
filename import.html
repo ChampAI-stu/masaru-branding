@@ -73,6 +73,10 @@
         <div id="progBox" style="display:none;padding:0 16px 12px">
           <div class="progress" style="height:9px"><i id="progBar" style="width:0%"></i></div>
           <div style="font-size:12px;color:var(--muted);margin-top:5px" id="progTxt"></div>
+          <div id="impErr" style="display:none;margin-top:10px">
+            <div class="insight bad"><div class="ic">⚠️</div><div>
+              <b>บันทึกไม่สำเร็จ</b><span id="impErrMsg" style="word-break:break-word"></span></div></div>
+          </div>
         </div>
         <div class="tbl-wrap" style="max-height:440px;overflow:auto">
           <table class="tbl"><thead id="prevHead"></thead><tbody id="prevBody"></tbody></table>
@@ -448,9 +452,10 @@
         // บางไฟล์ใส่ส่วนลดเป็นเลขติดลบ
         if(o.discount) o.discount = Math.abs(o.discount);
         if(!o.net_sales) o.net_sales = (o.gmv||0) - (o.discount||0);
-        var key=o.platform+'|'+o.order_no+'|'+(o.sku||'');
-        seen[key]=(seen[key]||0)+1;
-        o.line_no=seen[key];
+        // line_no จะกำหนดทีหลัง (ดู assignLineNo) เพราะต้องนับต่อออเดอร์
+        // ไม่ใช่ต่อ SKU — ไม่งั้นออเดอร์ที่มีหลาย SKU จะได้ line_no=1 ซ้ำกัน
+        // แล้ว Postgres ปฏิเสธทั้ง batch ("ON CONFLICT DO UPDATE command
+        // cannot affect row a second time") → บันทึกไม่ได้เลยแม้แต่แถวเดียว
       }
       if(s.table==='brand_creator_stats' || s.table==='brand_creator_skus'){
         o.content_type = normContent(o.content_type);
@@ -475,7 +480,37 @@
       });
       out=Object.keys(m).map(function(k){return m[k];});
     }
+
+    if(s.table==='brand_orders') assignLineNo(out);
     return {rows:out, skipped:skipped};
+  }
+
+  // กำหนด line_no แบบ "คงที่": เรียงตาม SKU ในแต่ละออเดอร์ก่อนแล้วไล่ 1,2,3...
+  // ทำแบบนี้เพื่อให้ออเดอร์เดียวกันที่อยู่ในหลายไฟล์ (เช่นไฟล์ร้านค้า + ไฟล์ KOL)
+  // ได้ line_no ตรงกันทุกครั้ง → อัปทับกันได้ ไม่เขียนข้ามรายการกัน
+  function assignLineNo(rows){
+    var g={};
+    rows.forEach(function(o,i){
+      o.__i=i;
+      var k=o.platform+'|'+o.order_no;
+      (g[k]=g[k]||[]).push(o);
+    });
+    Object.keys(g).forEach(function(k){
+      var arr=g[k];
+      arr.sort(function(a,b){
+        var x=String(a.sku||''), y=String(b.sku||'');
+        return x<y?-1:(x>y?1:a.__i-b.__i);
+      });
+      arr.forEach(function(o,idx){ o.line_no=idx+1; });
+    });
+    // กันเหนียว: การันตีคีย์ (platform, order_no, line_no) ไม่ซ้ำกันในชุดที่ส่ง
+    var used={};
+    rows.forEach(function(o){
+      delete o.__i;
+      var k=o.platform+'|'+o.order_no+'|'+o.line_no;
+      while(used[k]){ o.line_no++; k=o.platform+'|'+o.order_no+'|'+o.line_no; }
+      used[k]=1;
+    });
   }
 
   function renderPreview(){
@@ -518,6 +553,7 @@
     if(!confirm('บันทึก '+MB.fmt.n(rows.length)+' แถว เข้าตาราง '+s.table+' ?')) return;
     var who=(MB.state.profile&&MB.state.profile.full_name)||MB.state.user.email;
     $('btnImport').disabled=true; $('progBox').style.display='block';
+    $('impErr').style.display='none';
     var ok=0, msg='';
     try{
       ok = await MB.chunkUpsert(s.table, rows, {
@@ -531,8 +567,10 @@
       });
       MB.toast('บันทึกสำเร็จ '+MB.fmt.n(ok)+' แถว','ok');
     }catch(e){
-      msg=e.message||String(e);
-      MB.toast('บันทึกไม่สำเร็จ: '+msg,'err');
+      msg=(e && (e.message||e.details||e.hint)) ? [e.message,e.details,e.hint].filter(Boolean).join(' — ') : String(e);
+      MB.toast('บันทึกไม่สำเร็จ — ดูรายละเอียดด้านล่าง','err');
+      $('impErrMsg').textContent=msg;
+      $('impErr').style.display='block';
     }
     try{
       await MB.sb.from('brand_import_logs').insert({
@@ -570,7 +608,7 @@
       var rows=r.data||[];
       if(!rows.length){ MB.tableEmpty(tb,8,'ยังไม่มีประวัติ'); return; }
       tb.innerHTML=rows.map(function(x){
-        return '<tr><td>'+MB.esc(x.file_name||'-')+'</td>'+
+        var tr='<tr><td>'+MB.esc(x.file_name||'-')+'</td>'+
           '<td><span class="pill mute">'+MB.esc(x.source||'-')+'</span></td>'+
           '<td style="font-size:12px;color:var(--muted)">'+MB.esc(x.target_table||'-')+'</td>'+
           '<td class="num">'+MB.fmt.n(x.rows_total)+'</td>'+
@@ -578,6 +616,12 @@
           '<td>'+MB.esc(x.imported_by||'-')+'</td>'+
           '<td>'+MB.fmt.dt(x.created_at)+'</td>'+
           '<td><span class="pill '+(x.status==='SUCCESS'?'up':'down')+'">'+MB.esc(x.status)+'</span></td></tr>';
+        // แถวเสริม: แสดงสาเหตุที่ล้มเหลว เพื่อไม่ต้องเดา
+        if(x.status!=='SUCCESS' && x.message){
+          tr+='<tr><td colspan="8" style="background:#fff5f5;color:#8a1220;font-size:12px;'+
+              'padding:8px 12px;word-break:break-word">⚠️ '+MB.esc(x.message)+'</td></tr>';
+        }
+        return tr;
       }).join('');
     }catch(e){ MB.tableEmpty(tb,8,'โหลดไม่สำเร็จ: '+(e.message||e)); }
   }
