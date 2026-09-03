@@ -20,6 +20,7 @@
       <div class="spacer"></div>
       <button class="btn ghost sm" id="btnFill">เติมแบรนด์จาก SKU Master</button>
       <button class="btn ghost sm" id="btnSync">สร้าง SKU Master จากออเดอร์</button>
+      <button class="btn ghost sm" id="btnCreator">สร้างข้อมูลครีเอเตอร์จากออเดอร์</button>
     </div>
 
     <div class="content">
@@ -136,7 +137,7 @@
       fields:[
         F('order_no','Order ID',1,['order id','order no','เลขออเดอร์','order_id']),
         F('order_date','วันที่',1,['created time','order date','paid time','วันที่'],'date'),
-        F('shop_name','ชื่อร้าน',0,['shop name','seller name','ร้าน']),
+        F('shop_name','ชื่อร้าน/คลัง',0,['warehouse name','shop name','seller name','ร้าน']),
         F('sku','Seller SKU',1,['seller sku','sku id','sku','รหัสสินค้า']),
         F('product_name','ชื่อสินค้า',0,['product name','ชื่อสินค้า','item name']),
         F('qty','จำนวน',0,['quantity','qty','จำนวน'],'num'),
@@ -144,8 +145,8 @@
         F('discount','ส่วนลด',0,['sku seller discount','discount','ส่วนลด'],'num'),
         F('net_sales','ยอดสุทธิ',0,['sku subtotal after discount','settlement amount','ยอดสุทธิ'],'num'),
         F('status','สถานะ',0,['order status','status','สถานะ']),
-        F('creator_name','ครีเอเตอร์',0,['creator name','affiliate creator','creator','ครีเอเตอร์','partner name']),
-        F('content_type','ประเภทคอนเทนต์',0,['content type','traffic source','source','ประเภท'])
+        F('creator_name','ครีเอเตอร์',0,['creator handle','creator name','affiliate creator','creator','ครีเอเตอร์','partner name']),
+        F('content_type','ช่องทาง (Videos/LIVE)',0,['order channel','content type','traffic source','source','ประเภท'])
       ]
     },
     LAZADA_ORDER: {
@@ -154,14 +155,15 @@
       table:'brand_orders', conflict:'platform,order_no,line_no', ic:'🛒',
       fixed:{ platform:'LAZADA', source:'LAZADA' },
       fields:[
-        F('order_no','Order Number',1,['order number','orderid','order no','order id','เลขออเดอร์']),
-        F('order_date','วันที่',1,['created at','order date','วันที่','createtime'],'date'),
-        F('shop_name','ชื่อร้าน',0,['shop name','store','ร้าน']),
-        F('sku','Seller SKU',1,['seller sku','sku','รหัสสินค้า','shop sku']),
-        F('product_name','ชื่อสินค้า',0,['item name','product name','ชื่อสินค้า']),
-        F('qty','จำนวน',0,['quantity','qty','จำนวน'],'num'),
-        F('gmv','ยอดขาย',1,['unit price','paid price','item price','gmv','ยอดขาย'],'num'),
-        F('net_sales','ยอดสุทธิ',0,['seller income','payout','ยอดสุทธิ'],'num'),
+        F('order_no','Order Number',1,['ordernumber','order number','orderid','order no','order id','เลขออเดอร์']),
+        F('order_date','วันที่',1,['createtime','created at','order date','วันที่'],'date'),
+        F('shop_name','ชื่อร้าน',0,['warehouse','shop name','store','ร้าน']),
+        F('sku','Seller SKU',1,['sellersku','seller sku','sku','รหัสสินค้า','shop sku']),
+        F('product_name','ชื่อสินค้า',0,['itemname','item name','product name','ชื่อสินค้า']),
+        F('qty','จำนวน (ไม่มีในไฟล์ = 1)',0,['quantity','qty','จำนวน'],'num'),
+        F('gmv','ยอดขาย (ก่อนลด)',1,['unitprice','unit price','item price','gmv','ยอดขาย'],'num'),
+        F('discount','ส่วนลดร้าน',0,['sellerdiscounttotal','seller discount','discount','ส่วนลด'],'num'),
+        F('net_sales','ยอดที่ลูกค้าจ่าย',0,['paidprice','paid price','seller income','payout','ยอดสุทธิ'],'num'),
         F('status','สถานะ',0,['status','order status','สถานะ'])
       ]
     },
@@ -303,6 +305,8 @@
     if(s.indexOf('return')>=0||s.indexOf('refund')>=0||s.indexOf('คืน')>=0) return 'RETURNED';
     if(s.indexOf('ship')>=0||s.indexOf('transit')>=0||s.indexOf('จัดส่ง')>=0) return 'SHIPPING';
     if(s.indexOf('pend')>=0||s.indexOf('unpaid')>=0||s.indexOf('รอ')>=0) return 'PENDING';
+    // ส่งไม่สำเร็จ / ของหาย — ไม่นับเป็นยอดขาย
+    if(s.indexOf('fail')>=0||s.indexOf('lost')>=0||s.indexOf('สูญหาย')>=0) return 'RETURNED';
     return 'COMPLETED';
   }
 
@@ -439,6 +443,10 @@
         o.platform = normPlatform(o.platform) || s.fixed.platform || 'TIKTOK';
         o.status   = normStatus(o.status);
         o.content_type = o.content_type ? normContent(o.content_type) : (o.creator_name?'VDO':'SHOP');
+        // บางแพลตฟอร์ม (Lazada) ไม่มีคอลัมน์จำนวน — 1 แถว = 1 ชิ้น
+        if(!o.qty || o.qty < 1) o.qty = 1;
+        // บางไฟล์ใส่ส่วนลดเป็นเลขติดลบ
+        if(o.discount) o.discount = Math.abs(o.discount);
         if(!o.net_sales) o.net_sales = (o.gmv||0) - (o.discount||0);
         var key=o.platform+'|'+o.order_no+'|'+(o.sku||'');
         seen[key]=(seen[key]||0)+1;
@@ -538,6 +546,18 @@
     loadLogs();
     if(!msg && s.table==='brand_orders'){
       try{ await MB.rpc('brand_fill_brands'); }catch(e){}
+      // ไฟล์ TikTok มีคอลัมน์ครีเอเตอร์อยู่แล้ว — สร้างสถิติให้เลย ไม่ต้องอัปไฟล์เพิ่ม
+      var hasCreator = rows.some(function(r){ return r.creator_name; });
+      if(hasCreator){
+        var ds=rows.map(function(r){ return r.order_date; }).filter(Boolean).sort();
+        try{
+          var res=await MB.rpc('brand_rebuild_creator_stats',
+            {p_from:ds[0], p_to:ds[ds.length-1], p_platform:rows[0].platform||'TIKTOK'});
+          MB.toast('สร้างข้อมูลครีเอเตอร์แล้ว '+MB.fmt.n(res.stats_rows)+' แถว','ok');
+        }catch(e){
+          MB.toast('นำเข้าออเดอร์สำเร็จ แต่สร้างข้อมูลครีเอเตอร์ไม่ได้ — ตรวจว่ารัน schema5.sql แล้ว','err');
+        }
+      }
     }
   }
 
@@ -591,6 +611,20 @@
       catch(e){ MB.toast(e.message||e,'err'); }
       this.disabled=false;
     });
+    $('btnCreator').addEventListener('click',async function(){
+      var from=prompt('สร้างข้อมูลครีเอเตอร์จากออเดอร์ — ตั้งแต่วันที่ (YYYY-MM-DD)',
+                      MB.presetRange('mtd')[0]);
+      if(!from) return;
+      var to=prompt('ถึงวันที่ (YYYY-MM-DD)', MB.presetRange('mtd')[1]);
+      if(!to) return;
+      this.disabled=true;
+      try{
+        var r=await MB.rpc('brand_rebuild_creator_stats',{p_from:from,p_to:to,p_platform:'TIKTOK'});
+        MB.toast('สร้างแล้ว '+MB.fmt.n(r.stats_rows)+' แถวสถิติ · '+MB.fmt.n(r.sku_rows)+' แถว SKU','ok');
+      }catch(e){ MB.toast(e.message||e,'err'); }
+      this.disabled=false;
+    });
+
     $('btnSync').addEventListener('click',async function(){
       if(!confirm('สร้าง/อัปเดต SKU Master จาก SKU ทั้งหมดในตารางออเดอร์?')) return;
       this.disabled=true;
