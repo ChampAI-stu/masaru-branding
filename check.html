@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ตรวจระบบ · MASARU Branding</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{font-family:'IBM Plex Sans Thai',system-ui,sans-serif;background:#f2f4f8;color:#16233f;margin:0;padding:26px 18px;font-size:14px}
+  .wrap{max-width:820px;margin:0 auto}
+  h1{font-size:20px;margin:0 0 4px}
+  .sub{color:#64708a;font-size:13px;margin-bottom:20px}
+  .card{background:#fff;border:1px solid #e2e7ef;border-radius:14px;box-shadow:0 1px 2px rgba(24,35,56,.05),0 6px 18px rgba(24,35,56,.06);margin-bottom:14px}
+  .card h2{font-size:14.5px;margin:0;padding:13px 16px;border-bottom:1px solid #eef1f7}
+  .row{display:flex;gap:12px;padding:11px 16px;border-bottom:1px solid #eef1f7;align-items:flex-start}
+  .row:last-child{border-bottom:0}
+  .st{flex:0 0 78px;font-weight:700;font-size:12px;padding:2px 9px;border-radius:99px;text-align:center}
+  .ok{background:#e3f3ec;color:#1c7a55}
+  .no{background:#fbe6e8;color:#d62030}
+  .wait{background:#eef1f7;color:#64708a}
+  .warn{background:#fdf2dd;color:#8a5a12}
+  .row .txt b{display:block;font-size:13.5px}
+  .row .txt span{font-size:12.5px;color:#64708a;word-break:break-all}
+  code{background:#eef1f7;padding:1px 6px;border-radius:5px;font-size:12px}
+  .btn{display:inline-block;background:#16294d;color:#fff;border:0;border-radius:9px;padding:9px 16px;
+       font-weight:600;font-size:13px;text-decoration:none;cursor:pointer;font-family:inherit}
+  .btn.ghost{background:#fff;color:#16294d;border:1px solid #e2e7ef}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>ตรวจระบบ MASARU Branding</h1>
+  <div class="sub">หน้านี้บอกว่า “จอขาว” เกิดจากอะไร — ไม่ต้องล็อกอินก็เปิดได้</div>
+
+  <div class="card">
+    <h2>1 · ไฟล์และไลบรารี</h2>
+    <div id="files"></div>
+  </div>
+
+  <div class="card">
+    <h2>2 · การเชื่อมต่อ Supabase</h2>
+    <div id="conn"></div>
+  </div>
+
+  <div class="card">
+    <h2>3 · ตารางและฟังก์ชันในฐานข้อมูล</h2>
+    <div id="db"></div>
+  </div>
+
+  <div class="card">
+    <h2>4 · รหัสเชิญ / เวอร์ชันไฟล์</h2>
+    <div id="inv"></div>
+  </div>
+
+  <div style="display:flex;gap:9px;margin-top:6px;flex-wrap:wrap">
+    <a class="btn" href="index.html">← กลับหน้าหลัก</a>
+    <a class="btn ghost" href="javascript:location.reload()">ตรวจใหม่</a>
+    <button class="btn ghost" id="btnBust">ล้าง cache แล้วโหลดใหม่</button>
+  </div>
+  <div class="sub" style="margin-top:10px">
+    ถ้าอัปไฟล์ขึ้น repo แล้วแต่หน้าเว็บยังเป็นของเก่า กดปุ่ม “ล้าง cache แล้วโหลดใหม่”
+    หรือกด <code>Ctrl+Shift+R</code> (Mac: <code>Cmd+Shift+R</code>) ในหน้านั้น
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function(){
+  // ปุ่มล้าง cache: ดึงไฟล์ assets ใหม่แบบข้าม cache แล้วรีโหลด
+  var bb=document.getElementById('btnBust');
+  if(bb) bb.addEventListener('click',async function(){
+    this.disabled=true; this.textContent='กำลังล้าง…';
+    var base=location.origin+location.pathname.replace(/[^/]*$/,'');
+    try{
+      if(window.caches && caches.keys){
+        var ks=await caches.keys(); await Promise.all(ks.map(function(k){return caches.delete(k);}));
+      }
+      await Promise.all(['assets/app.js','assets/style.css','assets/boot.js'].map(function(p){
+        return fetch(base+p+'?bust='+Date.now(),{cache:'reload'}).catch(function(){});
+      }));
+    }catch(e){}
+    location.href='index.html?bust='+Date.now();
+  });
+
+  var esc=function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); };
+
+  function add(box,state,title,detail){
+    var cls = state==='ok'?'ok':state==='no'?'no':state==='warn'?'warn':'wait';
+    var lb  = state==='ok'?'ผ่าน':state==='no'?'ไม่ผ่าน':state==='warn'?'เตือน':'กำลังตรวจ';
+    document.getElementById(box).insertAdjacentHTML('beforeend',
+      '<div class="row"><div class="st '+cls+'">'+lb+'</div>'+
+      '<div class="txt"><b>'+title+'</b><span>'+(detail||'')+'</span></div></div>');
+  }
+
+  /* ---- 1. ไฟล์ ---- */
+  var base = location.origin + location.pathname.replace(/[^/]*$/,'');
+  add('files', window.supabase && window.supabase.createClient ? 'ok':'no',
+      'ไลบรารี Supabase (cdn.jsdelivr.net)',
+      window.supabase ? 'โหลดสำเร็จ' : 'โหลดไม่ขึ้น — เน็ตอาจบล็อก CDN');
+
+  function head(url,title,box,required){
+    fetch(url,{method:'GET',cache:'no-store'}).then(function(r){
+      add(box, r.ok?'ok':(required?'no':'warn'), title, r.ok? url : 'HTTP '+r.status+' · '+url);
+    }).catch(function(e){ add(box,'no',title,String(e)+' · '+url); });
+  }
+  head(base+'assets/app.js','ไฟล์ assets/app.js','files',true);
+  head(base+'assets/style.css','ไฟล์ assets/style.css','files',true);
+  head(base+'assets/boot.js','ไฟล์ assets/boot.js','files',true);
+
+  /* ---- 2. การเชื่อมต่อ ---- */
+  var URL_='https://espxzszehvtcbiudwfit.supabase.co';
+  var KEY_='sb_publishable_0I3vRvYoFE_8Fi6x_X2-CA_iGhN_JO7';
+  add('conn','ok','Supabase URL', URL_);
+  add('conn','ok','API key', KEY_.slice(0,22)+'…');
+
+  if(!window.supabase || !window.supabase.createClient){
+    add('conn','no','สร้าง client ไม่ได้','ไลบรารีไม่โหลด — ข้อ 3 จึงตรวจไม่ได้');
+    add('db','no','ข้ามการตรวจฐานข้อมูล','แก้ข้อ 1 ก่อน');
+    return;
+  }
+  var sb = window.supabase.createClient(URL_,KEY_);
+
+  sb.auth.getSession().then(function(r){
+    add('conn','ok','เรียก Auth ได้', r.data.session ? 'มี session ล็อกอินอยู่' : 'ยังไม่ได้ล็อกอิน (ปกติ)');
+  }).catch(function(e){ add('conn','no','เรียก Auth ไม่ได้', e.message||e); });
+
+  /* ---- 3. ฐานข้อมูล ---- */
+  function table(name,label,note){
+    sb.from(name).select('*',{count:'exact',head:true}).then(function(r){
+      if(r.error) add('db','no','ตาราง '+label, r.error.message+(note?' — '+note:''));
+      else add('db','ok','ตาราง '+label, 'มีอยู่ · '+(r.count==null?'?':r.count)+' แถว');
+    });
+  }
+  function fn(name,args,label,note){
+    sb.rpc(name,args||{}).then(function(r){
+      if(r.error) add('db','no','ฟังก์ชัน '+label, r.error.message+(note?' — '+note:''));
+      else add('db','ok','ฟังก์ชัน '+label, 'เรียกได้ปกติ');
+    });
+  }
+  /* ---- 4. รหัสเชิญจากไฟล์ app.js ที่ deploy อยู่จริง ---- */
+  fetch(base+'assets/app.js?nocache='+Date.now(),{cache:'no-store'})
+    .then(function(r){ return r.ok?r.text():Promise.reject('HTTP '+r.status); })
+    .then(function(txt){
+      var codes=txt.match(/inviteCodes:\s*\[([^\]]*)\]/);
+      var one=txt.match(/inviteCode:\s*'([^']*)'/);
+      var ver=txt.match(/version:\s*'([^']*)'/);
+      add('inv','ok','เวอร์ชันไฟล์ assets/app.js', ver?ver[1]:'(ไฟล์เก่า ไม่มีเลขเวอร์ชัน)');
+      if(codes) add('inv','ok','รหัสเชิญที่รับได้', codes[1].replace(/['\s]/g,'').split(',').join('  หรือ  '));
+      else if(one) add('inv','warn','รหัสเชิญที่รับได้ (ไฟล์เวอร์ชันเก่า)', one[1]);
+      else add('inv','no','อ่านรหัสเชิญไม่ได้','รูปแบบไฟล์ไม่ตรงที่คาด');
+    })
+    .catch(function(e){ add('inv','no','อ่านไฟล์ assets/app.js ไม่ได้', String(e)); });
+
+  var today=new Date().toISOString().slice(0,10);
+  table('brand_orders','brand_orders (ออเดอร์)','ยังไม่ได้รัน schema.sql');
+  table('brand_creator_stats','brand_creator_stats (ครีเอเตอร์)','ยังไม่ได้รัน schema.sql');
+  table('brand_roles','brand_roles (ตำแหน่ง)','ยังไม่ได้รัน schema2.sql');
+  table('brand_systems','brand_systems (ทะเบียนระบบ)','ยังไม่ได้รัน schema2.sql');
+  fn('brand_kpi',{p_from:today,p_to:today},'brand_kpi','ยังไม่ได้รัน schema.sql');
+  fn('brand_my_menu',{},'brand_my_menu','ยังไม่ได้รัน schema2.sql');
+})();
+</script>
+</body>
+</html>
