@@ -320,43 +320,29 @@
   }
 
   /* ---------------- 7) SHELL RENDER ---------------- */
-  /** แถบข้าง: ปุ่มกลับหน้าหลัก + ทุกหน้าที่ตำแหน่งนี้เข้าได้ */
+  /**
+   * แถบบนของหน้าทำงาน — ชื่อหน้า + ตำแหน่ง + ปุ่มกลับหน้าหลัก
+   * รายชื่อระบบทั้งหมดอยู่ที่หน้าหลักที่เดียว (ไม่ทำซ้ำในทุกหน้า)
+   */
   function renderShell() {
-    const el = document.getElementById('sidebar');
+    const el = document.getElementById('topHeader');
     if (!el) return;
-    const file = currentFile();
-    const here = rowForFile(file);
-
-    let html = '';
-    html += '<div class="brand"><div class="logo">M</div><div>' +
-            '<b>' + esc(here ? here.name : 'MASARU Branding') + '</b>' +
-            '<span>Branding Portal</span></div></div>';
-
-    html += '<nav class="nav">';
-    html += '<a href="index.html" class="back"><span class="ic">' +
-            '<i class="ti ti-arrow-back-up"></i></span>หน้าหลัก</a>';
-    if (state.menu.length) {
-      html += '<div class="grp">ระบบที่เข้าได้</div>';
-      state.menu.forEach(function (m) {
-        const active = m.url && m.url.split('?')[0] === file;
-        html += '<a href="' + esc(linkOf(m)) + '" class="' + (active ? 'active' : '') + '">' +
-                '<span class="ic"><i class="ti ' + esc(m.icon || 'ti-point') + '"></i></span>' +
-                esc(m.name) + '</a>';
-      });
-    }
-    html += '</nav>';
-
+    const here = rowForFile(currentFile());
     const name = (state.profile && state.profile.full_name) ||
                  (state.user && state.user.email) || '-';
-    html += '<div class="foot"><div class="who">' + esc(name) + '</div>' +
-            '<div class="role">' + esc(state.roleName || state.role) + '</div>' +
-            '<button type="button" id="btnSignOut">ออกจากระบบ</button></div>';
-    el.innerHTML = html;
+
+    el.innerHTML =
+      '<a class="wordmark" href="index.html" title="กลับหน้าหลัก">' +
+        '<div class="mark">M</div><b>MASARU</b></a>' +
+      '<div class="hdr-label">' + esc(here ? here.name : 'Branding Portal') + '</div>' +
+      '<div class="spacer"></div>' +
+      '<span class="role-pill">' + esc(name) + ' · ' + esc(state.roleName || state.role) + '</span>' +
+      '<a class="hdr-btn" href="index.html"><i class="ti ti-arrow-back-up"></i> หน้าหลัก</a>' +
+      '<button type="button" class="logout" id="btnSignOut">' +
+        '<i class="ti ti-logout"></i> ออกจากระบบ</button>';
 
     const btn = document.getElementById('btnSignOut');
     if (btn) btn.addEventListener('click', signOut);
-    const mb = document.getElementById('mobileBtn');
-    if (mb) mb.addEventListener('click', function () { el.classList.toggle('open'); });
   }
 
   /* ---------------- 8) UI HELPERS ---------------- */
