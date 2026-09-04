@@ -25,6 +25,7 @@
 
       <div class="tabs" id="segTab">
         <button data-v="target" class="on"><i class="ti ti-target"></i> เป้ายอดขาย</button>
+        <button data-v="src"><i class="ti ti-database-cog"></i> แหล่งยอดขาย</button>
         <button data-v="sku"><i class="ti ti-tags"></i> SKU Master</button>
         <button data-v="bl"><i class="ti ti-ban"></i> Blacklist</button>
         <button data-v="user"><i class="ti ti-users"></i> ผู้ใช้งาน</button>
@@ -58,6 +59,33 @@
             <thead><tr><th>เดือน</th><th>แพลตฟอร์ม</th><th>แบรนด์</th><th class="num">เป้า GMV</th>
               <th class="num">ทำได้จริง</th><th class="num">Achievement</th><th>หมายเหตุ</th><th style="width:90px"></th></tr></thead>
             <tbody id="tbTarget"></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- ============ แหล่งยอดขาย ============ -->
+      <section id="tabSrc" style="display:none">
+        <div class="card" style="margin-bottom:16px">
+          <div class="hd"><h3>แต่ละแพลตฟอร์ม นับยอดจากไฟล์ไหน</h3></div>
+          <div class="bd">
+            <div class="insight" style="margin-bottom:14px"><div class="ic">ℹ️</div><div>
+              <b>ทำไมต้องเลือก</b>
+              <span>ออเดอร์เดียวกันมีได้หลายไฟล์ (JST กับไฟล์ของร้าน) และตัวเลขมักไม่ตรงกัน
+              ระบบเก็บไว้ทุกไฟล์ แต่จะ<b>นับยอดจากไฟล์ที่เลือกไว้อย่างเดียว</b> เพื่อไม่ให้ยอดซ้ำ 2 เท่า
+              — เปลี่ยนตรงนี้ได้ตลอด ข้อมูลไม่หาย</span></div></div>
+            <div id="srcPick" class="grid" style="grid-template-columns:repeat(auto-fit,minmax(260px,1fr))"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="hd"><h3>เทียบยอดแต่ละไฟล์</h3><div class="spacer"></div>
+            <span style="font-size:12px;color:var(--muted)">ยอดไม่รวมออเดอร์ที่ยกเลิก/คืน</span>
+            <button class="btn ghost sm" id="btnSrcReload">รีเฟรช</button></div>
+          <div class="tbl-wrap">
+            <table class="tbl"><thead><tr>
+              <th>แพลตฟอร์ม</th><th>ไฟล์ต้นทาง</th><th>ใช้นับยอด</th>
+              <th class="num">แถว</th><th class="num">ออเดอร์</th><th class="num">ยอดขาย</th><th>ช่วงวันที่</th>
+            </tr></thead><tbody id="tbSrc"></tbody></table>
+          </div>
         </div>
       </section>
 
@@ -213,14 +241,79 @@
   var skuRows=[], roleRows=[], sysRows=[], userRows=[];
 
   /* ---------- TABS ---------- */
-  var TABS={target:'tabTarget',sku:'tabSku',bl:'tabBl',user:'tabUser',perm:'tabPerm',role:'tabRole'};
+  var TABS={target:'tabTarget',src:'tabSrc',sku:'tabSku',bl:'tabBl',user:'tabUser',perm:'tabPerm',role:'tabRole'};
   function showTab(k){
     Object.keys(TABS).forEach(function(x){ $(TABS[x]).style.display = (x===k?'block':'none'); });
+    if(k==='src') loadSrc();
     if(k==='sku'&&!skuRows.length) loadSku();
     if(k==='bl') loadBl();
     if(k==='user') loadUsers();
     if(k==='perm') loadPerm();
     if(k==='role') loadRoles();
+  }
+
+  /* ---------- แหล่งยอดขาย ---------- */
+  var SRC_LABEL={ JST:'JST (ERP)', TIKTOK:'ไฟล์ TikTok Seller', LAZADA:'ไฟล์ Lazada Seller' };
+  var srcRows=[];
+
+  async function loadSrc(){
+    var tb=$('tbSrc'); MB.tableLoading(tb,7);
+    try{
+      srcRows = await MB.rpc('brand_source_overview') || [];
+    }catch(e){
+      $('srcPick').innerHTML='<div class="insight bad"><div class="ic">⚠️</div><div>'+
+        '<b>ยังใช้ไม่ได้</b><span>ต้องรัน schema6.sql ใน Supabase ก่อน — '+MB.esc(e.message||e)+'</span></div></div>';
+      MB.tableEmpty(tb,7,'ยังไม่ได้รัน schema6.sql'); return;
+    }
+    paintSrcPick();
+    if(!srcRows.length){ MB.tableEmpty(tb,7,'ยังไม่มีข้อมูลออเดอร์'); return; }
+    tb.innerHTML=srcRows.map(function(x){
+      return '<tr'+(x.is_primary?'':' style="opacity:.55"')+'>'+
+        '<td><b>'+MB.esc(x.platform)+'</b></td>'+
+        '<td>'+MB.esc(SRC_LABEL[x.source]||x.source)+'</td>'+
+        '<td>'+(x.is_primary?'<span class="pill up">นับยอด</span>':'<span class="pill mute">เก็บไว้เฉยๆ</span>')+'</td>'+
+        '<td class="num">'+MB.fmt.n(x.rows_cnt)+'</td>'+
+        '<td class="num">'+MB.fmt.n(x.orders_cnt)+'</td>'+
+        '<td class="num"><b>'+MB.fmt.m(x.gmv)+'</b></td>'+
+        '<td style="font-size:12px;color:var(--muted)">'+MB.esc(x.first_date||'-')+' → '+MB.esc(x.last_date||'-')+'</td></tr>';
+    }).join('');
+  }
+
+  function paintSrcPick(){
+    var byPlat={};
+    srcRows.forEach(function(x){
+      (byPlat[x.platform]=byPlat[x.platform]||{list:[],cur:null});
+      byPlat[x.platform].list.push(x);
+      if(x.is_primary) byPlat[x.platform].cur=x.source;
+    });
+    var plats=Object.keys(byPlat);
+    if(!plats.length){
+      $('srcPick').innerHTML='<div class="empty">ยังไม่มีข้อมูลออเดอร์ — อัปไฟล์ที่หน้านำเข้าข้อมูลก่อน</div>';
+      return;
+    }
+    $('srcPick').innerHTML=plats.map(function(p){
+      var d=byPlat[p];
+      var opts=d.list.map(function(x){
+        return '<option value="'+MB.esc(x.source)+'"'+(x.source===d.cur?' selected':'')+'>'+
+               MB.esc(SRC_LABEL[x.source]||x.source)+' · '+MB.fmt.m(x.gmv)+'</option>';
+      }).join('');
+      return '<div class="card" style="margin:0"><div class="bd">'+
+        '<div style="font-weight:700;margin-bottom:8px">'+MB.esc(p)+'</div>'+
+        '<select class="inp srcSel" data-p="'+MB.esc(p)+'">'+opts+'</select>'+
+        (d.list.length>1?'':'<div style="font-size:12px;color:var(--muted);margin-top:6px">มีไฟล์ต้นทางเดียว</div>')+
+        '</div></div>';
+    }).join('');
+    [].forEach.call(document.querySelectorAll('.srcSel'),function(sel){
+      sel.addEventListener('change',async function(){
+        try{
+          await MB.rpc('brand_set_platform_source',{
+            p_platform:sel.dataset.p, p_source:sel.value,
+            p_by:(MB.state.profile&&MB.state.profile.full_name)||MB.state.user.email });
+          MB.toast(sel.dataset.p+' นับยอดจาก '+(SRC_LABEL[sel.value]||sel.value)+' แล้ว','ok');
+          loadSrc();
+        }catch(e){ MB.toast(e.message||e,'err'); }
+      });
+    });
   }
 
   /* ---------- ROLES + SYSTEMS (shared loaders) ---------- */
@@ -568,6 +661,7 @@
     });
 
     MB.segment($('segTab'),showTab);
+    $('btnSrcReload').addEventListener('click',loadSrc);
     $('tYear').addEventListener('change',loadTargets);
     $('qSku').addEventListener('input',paintSku);
     $('fBrand').addEventListener('change',paintSku);
