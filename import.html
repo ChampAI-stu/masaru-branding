@@ -116,7 +116,7 @@
     JST: {
       label:'JST (ERP) — ออเดอร์',
       desc:'ไฟล์ export ออเดอร์จาก Jushuitan ใช้เป็นยอดขายหลัก',
-      table:'brand_orders', conflict:'platform,order_no,line_no', ic:'🗂️',
+      table:'brand_orders', conflict:'source,platform,order_no,line_no', ic:'🗂️',
       fixed:{ source:'JST' },
       fields:[
         F('order_no','เลขที่ออเดอร์',1,['order no','订单编号','เลขออเดอร์','order id','order_sn','เลขที่ใบสั่งซื้อ','platform order']),
@@ -136,7 +136,7 @@
     TIKTOK_ORDER: {
       label:'TikTok Shop — ออเดอร์',
       desc:'All Orders export จาก TikTok Seller Center (มีข้อมูลครีเอเตอร์)',
-      table:'brand_orders', conflict:'platform,order_no,line_no', ic:'🎵',
+      table:'brand_orders', conflict:'source,platform,order_no,line_no', ic:'🎵',
       fixed:{ platform:'TIKTOK', source:'TIKTOK' },
       fields:[
         F('order_no','Order ID',1,['order id','order no','เลขออเดอร์','order_id']),
@@ -156,7 +156,7 @@
     LAZADA_ORDER: {
       label:'Lazada — ออเดอร์',
       desc:'Order/Transaction export จาก Lazada Seller Center',
-      table:'brand_orders', conflict:'platform,order_no,line_no', ic:'🛒',
+      table:'brand_orders', conflict:'source,platform,order_no,line_no', ic:'🛒',
       fixed:{ platform:'LAZADA', source:'LAZADA' },
       fields:[
         F('order_no','Order Number',1,['ordernumber','order number','orderid','order no','order id','เลขออเดอร์']),
@@ -492,7 +492,7 @@
     var g={};
     rows.forEach(function(o,i){
       o.__i=i;
-      var k=o.platform+'|'+o.order_no;
+      var k=(o.source||'')+'|'+o.platform+'|'+o.order_no;
       (g[k]=g[k]||[]).push(o);
     });
     Object.keys(g).forEach(function(k){
@@ -507,8 +507,8 @@
     var used={};
     rows.forEach(function(o){
       delete o.__i;
-      var k=o.platform+'|'+o.order_no+'|'+o.line_no;
-      while(used[k]){ o.line_no++; k=o.platform+'|'+o.order_no+'|'+o.line_no; }
+      var k=(o.source||'')+'|'+o.platform+'|'+o.order_no+'|'+o.line_no;
+      while(used[k]){ o.line_no++; k=(o.source||'')+'|'+o.platform+'|'+o.order_no+'|'+o.line_no; }
       used[k]=1;
     });
   }
