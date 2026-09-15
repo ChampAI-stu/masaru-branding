@@ -93,6 +93,43 @@
           </table>
         </div>
       </div>
+
+      <!-- ลบข้อมูล -->
+      <div class="card" style="margin-top:16px;border-color:#f3c7cc">
+        <div class="hd" style="background:#fff6f7">
+          <h3 style="color:#8a1220">ลบข้อมูลที่อัปไปแล้ว</h3><div class="spacer"></div>
+          <span style="font-size:12px;color:var(--muted)">ใช้เมื่ออัปผิดเดือน / ผิดแพลตฟอร์ม / อยากล้างแล้วอัปใหม่</span>
+        </div>
+        <div class="bd">
+          <div class="insight bad" style="margin-bottom:14px"><div class="ic">⚠️</div><div>
+            <b>ลบแล้วเอาคืนไม่ได้</b>
+            <span>กด "ตรวจก่อนลบ" เพื่อดูว่าจะลบอะไรกี่แถวก่อนทุกครั้ง — ระบบจะบันทึกการลบไว้ในประวัติด้านบน</span></div></div>
+
+          <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px">
+            <div class="field"><label>วันที่เริ่ม</label><input type="date" id="dFrom"></div>
+            <div class="field"><label>วันที่สิ้นสุด</label><input type="date" id="dTo"></div>
+            <div class="field"><label>แพลตฟอร์ม</label><select id="dPlat">
+              <option value="ALL">ทุกแพลตฟอร์ม</option>
+              <option value="TIKTOK">TIKTOK</option>
+              <option value="LAZADA">LAZADA</option>
+            </select></div>
+            <div class="field"><label>แหล่งไฟล์</label><select id="dSrc">
+              <option value="ALL">ทุกแหล่ง</option>
+              <option value="JST">JST (ERP)</option>
+              <option value="TIKTOK">ไฟล์ TikTok</option>
+              <option value="LAZADA">ไฟล์ Lazada</option>
+            </select></div>
+          </div>
+
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <button class="btn ghost" id="btnDelPrev"><i class="ti ti-search"></i> ตรวจก่อนลบ</button>
+            <button class="btn gold" id="btnDelGo" disabled><i class="ti ti-trash"></i> ลบข้อมูล</button>
+            <button class="btn ghost sm" id="btnInv">ดูข้อมูลที่มีในระบบ</button>
+          </div>
+
+          <div id="delPrev" style="margin-top:14px"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -599,6 +636,86 @@
     }
   }
 
+  /* ================= ลบข้อมูล ================= */
+  var delOK = null;   // เก็บเงื่อนไขที่ "ผ่านการตรวจแล้ว" — ต้องตรงกับที่กดลบ
+
+  function delArgs(){
+    return { p_from:$('dFrom').value, p_to:$('dTo').value,
+             p_platform:$('dPlat').value, p_source:$('dSrc').value };
+  }
+  function delKey(a){ return [a.p_from,a.p_to,a.p_platform,a.p_source].join('|'); }
+
+  async function doDelPreview(){
+    var a=delArgs();
+    if(!a.p_from||!a.p_to){ MB.toast('เลือกช่วงวันที่ก่อน','err'); return; }
+    if(a.p_to < a.p_from){ MB.toast('วันที่สิ้นสุดต้องไม่น้อยกว่าวันที่เริ่ม','err'); return; }
+    $('btnDelPrev').disabled=true;
+    try{
+      var p=await MB.rpc('brand_delete_preview',a);
+      if(!p.rows){
+        delOK=null; $('btnDelGo').disabled=true;
+        $('delPrev').innerHTML='<div class="empty">ไม่มีข้อมูลตามเงื่อนไขนี้ — ไม่มีอะไรให้ลบ</div>';
+      }else{
+        delOK=delKey(a); $('btnDelGo').disabled=false;
+        var bs=(p.by_source||[]).map(function(x){
+          return '<tr><td>'+MB.esc(x.platform)+'</td><td>'+MB.esc(x.source)+'</td>'+
+                 '<td class="num">'+MB.fmt.n(x.rows)+'</td></tr>';
+        }).join('');
+        $('delPrev').innerHTML=
+          '<div class="insight bad"><div class="ic">🗑️</div><div><b>จะลบทั้งหมด '+MB.fmt.n(p.rows)+' แถว</b>'+
+          '<span>'+MB.fmt.n(p.orders)+' ออเดอร์ · '+MB.fmt.n(p.skus)+' SKU · ครีเอเตอร์ '+MB.fmt.n(p.creators)+' คน · '+
+          'ยอดขาย '+MB.fmt.m(p.gmv)+' บาท<br>วันที่ '+MB.esc(p.first_date||'-')+' ถึง '+MB.esc(p.last_date||'-')+'</span></div></div>'+
+          '<div class="tbl-wrap" style="margin-top:10px"><table class="tbl"><thead><tr>'+
+          '<th>แพลตฟอร์ม</th><th>แหล่งไฟล์</th><th class="num">แถว</th></tr></thead><tbody>'+bs+'</tbody></table></div>';
+      }
+    }catch(e){
+      $('delPrev').innerHTML='<div class="insight bad"><div class="ic">⚠️</div><div>'+
+        '<b>ยังใช้ไม่ได้</b><span>ต้องรัน schema8.sql ใน Supabase ก่อน — '+MB.esc(e.message||e)+'</span></div></div>';
+    }
+    $('btnDelPrev').disabled=false;
+  }
+
+  async function doDelete(){
+    var a=delArgs();
+    if(delOK !== delKey(a)){
+      MB.toast('เงื่อนไขเปลี่ยนไปแล้ว — กด "ตรวจก่อนลบ" อีกครั้ง','err');
+      $('btnDelGo').disabled=true; delOK=null; return;
+    }
+    var want='ลบ';
+    var typed=prompt('ยืนยันการลบ '+a.p_from+' ถึง '+a.p_to+
+      '\nแพลตฟอร์ม: '+a.p_platform+'  แหล่งไฟล์: '+a.p_source+
+      '\n\nลบแล้วเอาคืนไม่ได้ — พิมพ์คำว่า  '+want+'  เพื่อยืนยัน');
+    if((typed||'').trim()!==want){ MB.toast('ยกเลิกการลบ','ok'); return; }
+    $('btnDelGo').disabled=true;
+    try{
+      a.p_by=(MB.state.profile&&MB.state.profile.full_name)||MB.state.user.email;
+      var r=await MB.rpc('brand_delete_orders',a);
+      MB.toast('ลบแล้ว '+MB.fmt.n(r.orders_deleted)+' แถว','ok');
+      $('delPrev').innerHTML='<div class="insight"><div class="ic">✅</div><div>'+
+        '<b>ลบเรียบร้อย</b><span>ออเดอร์ '+MB.fmt.n(r.orders_deleted)+' แถว · '+
+        'ล้างสถิติครีเอเตอร์ '+MB.fmt.n(r.creator_stats_cleared)+' แถว แล้วสร้างใหม่จากออเดอร์ที่เหลือให้อัตโนมัติ</span></div></div>';
+      delOK=null; loadLogs();
+    }catch(e){ MB.toast(e.message||e,'err'); $('btnDelGo').disabled=false; }
+  }
+
+  async function showInventory(){
+    try{
+      var rows=await MB.rpc('brand_data_inventory') || [];
+      if(!rows.length){ $('delPrev').innerHTML='<div class="empty">ยังไม่มีข้อมูลในระบบ</div>'; return; }
+      $('delPrev').innerHTML='<div class="tbl-wrap"><table class="tbl"><thead><tr>'+
+        '<th>แพลตฟอร์ม</th><th>แหล่งไฟล์</th><th class="num">แถว</th><th>ช่วงวันที่</th><th>เดือนที่มีข้อมูล</th>'+
+        '</tr></thead><tbody>'+rows.map(function(x){
+          return '<tr><td><b>'+MB.esc(x.platform)+'</b></td><td>'+MB.esc(x.source)+'</td>'+
+            '<td class="num">'+MB.fmt.n(x.rows_cnt)+'</td>'+
+            '<td style="font-size:12px">'+MB.esc(x.first_date||'-')+' → '+MB.esc(x.last_date||'-')+'</td>'+
+            '<td style="font-size:12px;color:var(--muted)">'+MB.esc(x.months||'-')+'</td></tr>';
+        }).join('')+'</tbody></table></div>';
+    }catch(e){
+      $('delPrev').innerHTML='<div class="insight bad"><div class="ic">⚠️</div><div>'+
+        '<b>ยังใช้ไม่ได้</b><span>ต้องรัน schema8.sql ก่อน — '+MB.esc(e.message||e)+'</span></div></div>';
+    }
+  }
+
   /* ================= LOGS ================= */
   async function loadLogs(){
     var tb=$('logBody'); MB.tableLoading(tb,8);
@@ -648,6 +765,17 @@
     });
     $('btnGuess').addEventListener('click',buildMapping);
     $('btnImport').addEventListener('click',doImport);
+
+    /* ----- ลบข้อมูล ----- */
+    $('btnDelPrev').addEventListener('click',doDelPreview);
+    $('btnDelGo').addEventListener('click',doDelete);
+    $('btnInv').addEventListener('click',showInventory);
+    // แก้เงื่อนไขแล้วต้องกดตรวจใหม่ — กันลบผิดช่วง
+    ['dFrom','dTo','dPlat','dSrc'].forEach(function(id){
+      $(id).addEventListener('change',function(){
+        delOK=null; $('btnDelGo').disabled=true;
+      });
+    });
 
     $('btnFill').addEventListener('click',async function(){
       this.disabled=true;
