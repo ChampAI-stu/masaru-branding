@@ -152,22 +152,24 @@
   var SOURCES = {
     JST: {
       label:'JST (ERP) — ออเดอร์',
-      desc:'ไฟล์ export ออเดอร์จาก Jushuitan ใช้เป็นยอดขายหลัก',
+      desc:'ไฟล์ export ออเดอร์จาก Jushuitan — ครอบคลุมทุกร้าน (ถ้าไฟล์ใหญ่ ให้ Save As เป็น .csv ก่อน)',
       table:'brand_orders', conflict:'source,platform,order_no,line_no', ic:'🗂️',
       fixed:{ source:'JST' },
       fields:[
-        F('order_no','เลขที่ออเดอร์',1,['order no','订单编号','เลขออเดอร์','order id','order_sn','เลขที่ใบสั่งซื้อ','platform order']),
-        F('order_date','วันที่สั่งซื้อ',1,['order date','วันที่','下单时间','created time','เวลาสั่งซื้อ','order time'],'date'),
-        F('platform','แพลตฟอร์ม',1,['platform','shop type','ช่องทาง','ร้านค้า','店铺','shop']),
-        F('shop_name','ชื่อร้าน',0,['shop name','ร้าน','店铺名称','shop']),
-        F('sku','รหัสสินค้า (SKU)',1,['sku','商品编码','รหัสสินค้า','seller sku','item sku','sku id']),
-        F('product_name','ชื่อสินค้า',0,['product name','商品名称','ชื่อสินค้า','item name','product']),
+        // ใช้ "เลขออเดอร์ออนไลน์" (เลขของแพลตฟอร์ม) ไม่ใช่ "หมายเลขออเดอร์ภายใน"
+        // เพื่อให้เทียบกับไฟล์ของร้านได้ว่าเป็นออเดอร์เดียวกัน
+        F('order_no','เลขที่ออเดอร์',1,['เลขออเดอร์ออนไลน์','order no','订单编号','เลขออเดอร์','order id','order_sn','เลขที่ใบสั่งซื้อ','platform order']),
+        F('order_date','วันที่สั่งซื้อ',1,['เวลาสั่งซื้อ','order date','วันที่','下单时间','created time','order time'],'date'),
+        F('platform','แพลตฟอร์ม',1,['แพลตฟอร์ม','platform','shop type','ช่องทาง','店铺']),
+        F('shop_name','ชื่อร้าน',0,['ร้านค้า','shop name','ร้าน','店铺名称','shop']),
+        F('sku','รหัสสินค้า (SKU)',1,['รหัสสินค้า','sku','商品编码','seller sku','item sku','sku id']),
+        F('product_name','ชื่อสินค้า',0,['ชื่อสินค้า','product name','商品名称','item name','product']),
         F('brand','แบรนด์',0,['brand','แบรนด์','品牌']),
-        F('qty','จำนวน',0,['qty','quantity','数量','จำนวน','ชิ้น'],'num'),
-        F('gmv','ยอดขาย (GMV)',1,['amount','gmv','总金额','ยอดขาย','sales','total','应收金额','subtotal'],'num'),
-        F('discount','ส่วนลด',0,['discount','优惠','ส่วนลด'],'num'),
+        F('qty','จำนวน',0,['จำนวน','qty','quantity','数量','ชิ้น'],'num'),
+        F('gmv','ยอดขาย (GMV)',1,['ราคาต่อหน่วย','amount','gmv','总金额','ยอดขาย','sales','total','应收金额','subtotal'],'num'),
+        F('discount','ส่วนลด',0,['ส่วนลดจากร้านค้า (สินค้า)','discount','优惠','ส่วนลด'],'num'),
         F('net_sales','ยอดสุทธิ',0,['net','实收','ยอดสุทธิ','settlement','payout'],'num'),
-        F('status','สถานะ',0,['status','状态','สถานะ','order status'])
+        F('status','สถานะ',0,['สถานะคำสั่งซื้อ','status','状态','สถานะ','order status'])
       ]
     },
     TIKTOK_ORDER: {
@@ -287,7 +289,12 @@
   }
 
   /* ================= HELPERS ================= */
-  function norm(s){ return String(s==null?'':s).toLowerCase().replace(/[\s_\-\.\(\)\[\]\/]/g,'').trim(); }
+  // ตัดช่องว่าง/วงเล็บ/ขีด + อักขระล่องหน (zero-width, BOM) ที่มักติดมากับหัวตาราง JST
+  function norm(s){
+    return String(s==null?'':s).toLowerCase()
+      .replace(/[​-‍﻿ ]/g,'')
+      .replace(/[\s_\-\.\(\)\[\]\/]/g,'').trim();
+  }
 
   function guessCol(field){
     var cands = [field.key, field.label].concat(field.alias);
@@ -396,14 +403,87 @@
   }
 
   /* ================= FILE READ ================= */
+  // คำแนะนำเวลาไฟล์ใหญ่เกินกว่าที่เบราว์เซอร์อ่านไหว
+  var BIG_HELP =
+    '<div class="insight bad"><div class="ic">⚠️</div><div>'+
+    '<b>ไฟล์ใหญ่เกินกว่าที่เบราว์เซอร์อ่านไหว</b>'+
+    '<span>ไฟล์ .xlsx บางตัว (เช่น export จาก JST) เก็บข้อความแบบเปลืองเนื้อที่มาก '+
+    'ขนาดจริงตอนแตกไฟล์อาจถึง 150–200 MB เบราว์เซอร์จึงจองหน่วยความจำไม่พอ'+
+    '<br><br><b>แก้ได้ง่ายๆ — แปลงเป็น .csv ก่อน</b><br>'+
+    '1. เปิดไฟล์ด้วย Excel<br>'+
+    '2. File → Save As → เลือก <b>CSV UTF-8 (Comma delimited)</b><br>'+
+    '3. อัปไฟล์ .csv ที่ได้เข้าที่นี่<br><br>'+
+    'ไฟล์ .csv ขนาดเท่ากันจะเบากว่ามาก — ทดสอบแล้ว 61,000 แถว อ่านเสร็จใน ~8 วินาที'+
+    '</span></div></div>';
+
+  // ---- ตัวอ่าน CSV ของเราเอง ----
+  // ทำไมไม่ใช้ SheetJS อ่าน CSV: SheetJS จะแปลงเลขยาวเป็น "ตัวเลข" ของ JS
+  // เลขออเดอร์ TikTok มี 18 หลัก เกินความละเอียดของ JS (16-17 หลัก)
+  // → 585825904104408251 จะกลายเป็น 585825904104408200  (เลขออเดอร์เพี้ยน!)
+  // ตัวอ่านนี้เก็บทุกช่องเป็น "ข้อความ" เสมอ แล้วค่อยแปลงเป็นเลข/วันที่ทีหลัง
+  function parseCSV(text){
+    if(text.charCodeAt(0)===0xFEFF) text=text.slice(1);      // ตัด BOM
+    // เดาตัวคั่นจากบรรทัดแรก
+    var head=text.slice(0, 4000).split(/\r?\n/)[0] || '';
+    var cand=[',',';','\t','|'], D=',', best=-1;
+    cand.forEach(function(d){
+      var c=head.split(d).length; if(c>best){ best=c; D=d; }
+    });
+    var rows=[], row=[], cell='', q=false, i=0, n=text.length;
+    for(; i<n; i++){
+      var ch=text[i];
+      if(q){
+        if(ch==='"'){
+          if(text[i+1]==='"'){ cell+='"'; i++; }
+          else q=false;
+        } else cell+=ch;
+      } else if(ch==='"'){ q=true; }
+      else if(ch===D){ row.push(cell); cell=''; }
+      else if(ch==='\n'){ row.push(cell); rows.push(row); row=[]; cell=''; }
+      else if(ch==='\r'){ /* ข้าม */ }
+      else cell+=ch;
+    }
+    if(cell!=='' || row.length){ row.push(cell); rows.push(row); }
+    return rows;
+  }
+
+  // เตือนถ้าเจอเลขที่ยาวเกินความละเอียดของ JS (อ่านจาก .xlsx)
+  function unsafeNumberCols(arr, hdrs){
+    var bad=[];
+    var LIM=9007199254740991;   // 2^53-1
+    for(var c=0;c<hdrs.length;c++){
+      for(var r=0;r<Math.min(arr.length,50);r++){
+        var v=arr[r][c];
+        if(typeof v==='number' && Math.abs(v)>LIM){ bad.push(hdrs[c]); break; }
+      }
+    }
+    return bad;
+  }
+
   function readFile(file){
     fileName=file.name;
+    var ext=(file.name.split('.').pop()||'').toLowerCase();
+    var isCsv = /^(csv|tsv|txt)$/.test(ext);
+    var big = /^xlsx?$/.test(ext) && file.size > 8*1024*1024;
+    if(big){
+      $('fileInfo').innerHTML='<div class="insight"><div class="ic">⏳</div><div>'+
+        '<b>กำลังอ่านไฟล์ขนาด '+(file.size/1048576).toFixed(1)+' MB …</b>'+
+        '<span>ไฟล์ .xlsx ใหญ่ใช้เวลาสักครู่ ถ้าอ่านไม่ผ่านจะมีวิธีแก้ขึ้นให้</span></div></div>';
+    }
     var fr=new FileReader();
+    fr.onerror=function(){
+      $('fileInfo').innerHTML = BIG_HELP;
+    };
     fr.onload=function(e){
       try{
-        var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
-        var ws=wb.Sheets[wb.SheetNames[0]];
-        var arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false,raw:true});
+        var arr, warn='';
+        if(isCsv){
+          arr = parseCSV(String(e.target.result));   // ทุกช่องเป็นข้อความ — เลขออเดอร์ไม่เพี้ยน
+        }else{
+          var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+          var ws=wb.Sheets[wb.SheetNames[0]];
+          arr=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',blankrows:false,raw:true});
+        }
         if(!arr.length) throw new Error('ไฟล์ว่าง');
         // หาแถว header (แถวแรกที่มีค่าไม่ว่างอย่างน้อย 3 ช่อง)
         var hi=0;
@@ -417,15 +497,31 @@
         }).map(function(r){
           var o={}; headers.forEach(function(h,i){ o[h]=r[i]; }); return o;
         });
+
+        // เตือนถ้าไฟล์ .xlsx มีเลขยาวเกินความละเอียดของ JS (เลขออเดอร์จะเพี้ยน)
+        if(!isCsv){
+          var bad=unsafeNumberCols(arr.slice(hi+1), headers);
+          if(bad.length){
+            warn='<div class="insight bad" style="margin-top:8px"><div class="ic">⚠️</div><div>'+
+              '<b>คอลัมน์นี้เป็นตัวเลขยาวเกินไป ค่าอาจเพี้ยน</b><span>'+MB.esc(bad.join(', '))+
+              '<br>ถ้าเป็นคอลัมน์เลขออเดอร์ ให้ Save As ไฟล์เป็น <b>.csv</b> แล้วอัปใหม่ '+
+              '(ระบบอ่าน .csv เป็นข้อความ เลขจะไม่เพี้ยน)</span></div></div>';
+          }
+        }
+
         $('fileInfo').innerHTML='<div class="insight good"><div class="ic">📄</div><div>'+
-          '<b>'+MB.esc(fileName)+'</b><span>'+MB.fmt.n(rawRows.length)+' แถว · '+headers.length+' คอลัมน์ (header อยู่แถวที่ '+(hi+1)+')</span></div></div>';
+          '<b>'+MB.esc(fileName)+'</b><span>'+MB.fmt.n(rawRows.length)+' แถว · '+headers.length+
+          ' คอลัมน์ (header อยู่แถวที่ '+(hi+1)+')</span></div></div>'+warn;
         if(!srcKey){ askPickSource(); return; }
         buildMapping();
       }catch(err){
-        $('fileInfo').innerHTML='<div class="insight bad"><div class="ic">⚠️</div><div><b>อ่านไฟล์ไม่สำเร็จ</b><span>'+MB.esc(err.message||err)+'</span></div></div>';
+        var m=String(err && (err.message||err));
+        var help = /allocat|out of memory|buffer|heap/i.test(m) ? BIG_HELP :
+          '<div class="insight bad"><div class="ic">⚠️</div><div><b>อ่านไฟล์ไม่สำเร็จ</b><span>'+MB.esc(m)+'</span></div></div>';
+        $('fileInfo').innerHTML=help;
       }
     };
-    fr.readAsArrayBuffer(file);
+    if(isCsv) fr.readAsText(file,'UTF-8'); else fr.readAsArrayBuffer(file);
   }
 
   /* ================= MAPPING ================= */
